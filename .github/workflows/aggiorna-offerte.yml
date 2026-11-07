@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  pages: write
 
 concurrency:
   group: aggiorna-offerte
@@ -44,3 +45,9 @@ jobs:
             git commit -m "Offerte aggiornate $(date +'%d/%m/%Y')"
             git push
           fi
+
+      - name: Pubblica il sito aggiornato
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/pages/builds" || echo "Pubblicazione già in corso"

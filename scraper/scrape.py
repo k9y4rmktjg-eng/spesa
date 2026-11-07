@@ -6,7 +6,7 @@ e scrive data/offerte.json per l'app "Spesa di Famiglia".
 Gira da solo su GitHub Actions ogni settimana. Se una catena fallisce,
 le sue offerte precedenti restano e l'app mostra un avviso.
 """
-import hashlib, io, json, re, shutil, sys, time, traceback
+import hashlib, io, json, re, shutil, sys, time, traceback, unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -256,7 +256,8 @@ def conad_pdf(pdf_bytes, flyer, img_out):
         righe = []
         for b in page.get_text("dict")["blocks"]:
             for ln in b.get("lines", []):
-                t = "".join(s["text"] for s in ln["spans"]).strip()
+                t = unicodedata.normalize("NFKC", "".join(s["text"] for s in ln["spans"])).strip()
+                t = re.sub(r"(ff|fi|fl) (?=[a-zà-ù])", r"\1", t)
                 if not t:
                     continue
                 size = max(s["size"] for s in ln["spans"])
@@ -297,6 +298,9 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                             key=lambda r: r["bbox"].y0)
             nome = " ".join(r["t"] for r in gruppo)
             nome = RE_BADGE_IN.sub(" ", nome)
+            nome = re.sub(r"^REPARTO \S+\s+", "", nome, flags=re.I)
+            if re.search(r"VOLANTINO|PAGIN", nome, re.I):
+                continue
             nome = re.sub(r"\s+", " ", nome).strip(" ,.-")
             if len(nome) < 4:
                 continue
@@ -326,6 +330,10 @@ def conad_pdf(pdf_bytes, flyer, img_out):
             sc = next((r["t"] for r in intorno if re.search(r"-\s?\d+([,.]\d+)?\s?%", r["t"])), "")
             m = re.search(r"-\s?(\d+)(?:[,.](\d+))?\s?%", sc)
             sconto = f"-{round(float(m.group(1) + '.' + (m.group(2) or '0')))}%" if m else ""
+            if m and not vecchio:
+                pct = float(m.group(1) + "." + (m.group(2) or "0"))
+                if 0 < pct < 90:
+                    vecchio = round(prezzo(pr["t"]) / (1 - pct / 100), 2)
             unit = next((r["t"] for r in intorno if re.search(r"\bal (kg|l|lt|litro|pz)\b|/kg|/l\b", r["t"], re.I)), "")
             # foto: immagine incorporata più vicina, altrimenti ritaglio attorno a nome+prezzo
             centro = fitz.Point((gruppo[0]["bbox"].x0 + P.x1) / 2, (gruppo[0]["bbox"].y0 + P.y1) / 2)

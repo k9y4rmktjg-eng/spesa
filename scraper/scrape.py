@@ -229,6 +229,16 @@ def coop(ctx, n):
 RE_PREZZO = re.compile(r"^(?:€\s*)?(\d{1,3})\s?[,.]\s?(\d{2})\s*€?$")
 
 
+RE_BADGE = re.compile(r"^(SOTTO ?COSTO|SOTTO|COSTO|SOLO|OFFERTA|NOVIT[AÀ]|SCONTO.*|GRATIS|CONVIENE|PREZZO.*|PREZZI.*|"
+                      r"BASSI E FISSI|N°.*|.*PEZZI DISPONIBILI.*|A PARTIRE DA|IN PI[UÙ]|OGNI|"
+                      r"SCOPRI.*|DAL .*|FINO AL .*|SOLO PER .*|CARTA .*|€)$")
+RE_BADGE_IN = re.compile(r"\s*\b(SOTTO ?COSTO|NOVIT[AÀ])\b\s*", re.I)
+
+
+def _badge(t):
+    return bool(RE_BADGE.match(t.strip().upper()))
+
+
 def _maiuscolo(t):
     l = [c for c in t if c.isalpha()]
     return len(l) >= 3 and sum(c.isupper() for c in l) / len(l) > 0.8
@@ -257,7 +267,8 @@ def conad_pdf(pdf_bytes, flyer, img_out):
             continue
         soglia = max(r["size"] for r in cand) * 0.45
         prezzi = [r for r in cand if r["size"] >= soglia]
-        nomi = [r for r in righe if _maiuscolo(r["t"]) and not re.search(r"\d+[,.]\d{2}", r["t"])
+        nomi = [r for r in righe if _maiuscolo(r["t"]) and not _badge(r["t"])
+                and not re.search(r"\d+[,.]\d{2}", r["t"])
                 and r["size"] < max(p["size"] for p in prezzi) and len(r["t"]) <= 60]
         immagini = [fitz.Rect(i["bbox"]) & page.rect for i in page.get_image_info()
                     if (fitz.Rect(i["bbox"]) & page.rect).get_area() > 0.004 * W * H
@@ -285,7 +296,8 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                              and abs(r["bbox"].y0 - primo["bbox"].y0) < 60],
                             key=lambda r: r["bbox"].y0)
             nome = " ".join(r["t"] for r in gruppo)
-            nome = re.sub(r"\s+", " ", nome).strip()
+            nome = RE_BADGE_IN.sub(" ", nome)
+            nome = re.sub(r"\s+", " ", nome).strip(" ,.-")
             if len(nome) < 4:
                 continue
             p = prezzo(pr["t"])
@@ -295,11 +307,26 @@ def conad_pdf(pdf_bytes, flyer, img_out):
             visti.add(key)
             # dettaglio (es. "500 g") e prezzo al kg: righe minuscole subito sotto al nome
             ultimo = gruppo[-1]["bbox"]
-            sotto = [r["t"] for r in righe if 0 <= r["bbox"].y0 - ultimo.y1 < 40
-                     and abs(r["bbox"].x0 - ultimo.x0) < 50 and not _maiuscolo(r["t"])
-                     and not RE_PREZZO.match(r["t"].replace(" ", ""))]
-            unit = next((s for s in sotto if "/kg" in s or "/lt" in s or "/l " in s), "")
-            dett = next((s for s in sotto if s != unit), "")
+            sotto = [r["t"] for r in sorted(righe, key=lambda r: r["bbox"].y0)
+                     if -3 <= r["bbox"].y0 - ultimo.y1 < 45
+                     and abs(r["bbox"].x1 - ultimo.x1) < 60 and not _maiuscolo(r["t"]) and not _badge(r["t"])
+                     and re.search(r"[a-zà-ù]{2}", r["t"]) and not RE_PREZZO.match(r["t"].replace(" ", ""))]
+            dett = " ".join(sotto[:3])[:90]
+            # vicino al prezzo: prezzo barrato (sopra), sconto % e prezzo al kg/l (sotto)
+            intorno = [r for r in righe if r is not pr and abs((r["bbox"].x0 + r["bbox"].x1) / 2 - pc.x) < 0.18 * W
+                       and -0.09 * H < r["bbox"].y0 - P.y0 < 0.09 * H]
+            vecchio = None
+            for r in sorted(intorno, key=lambda r: abs(r["bbox"].y1 - P.y0)):
+                if r["bbox"].y1 <= P.y0 + 6 and r["size"] < pr["size"] * 0.7 and re.search(r"\d+[,.]\d{2}", r["t"]) \
+                        and "%" not in r["t"] and " al " not in r["t"]:
+                    v = prezzo(r["t"])
+                    if v and v > prezzo(pr["t"]):
+                        vecchio = v
+                        break
+            sc = next((r["t"] for r in intorno if re.search(r"-\s?\d+([,.]\d+)?\s?%", r["t"])), "")
+            m = re.search(r"-\s?(\d+)(?:[,.](\d+))?\s?%", sc)
+            sconto = f"-{round(float(m.group(1) + '.' + (m.group(2) or '0')))}%" if m else ""
+            unit = next((r["t"] for r in intorno if re.search(r"\bal (kg|l|lt|litro|pz)\b|/kg|/l\b", r["t"], re.I)), "")
             # foto: immagine incorporata più vicina, altrimenti ritaglio attorno a nome+prezzo
             centro = fitz.Point((gruppo[0]["bbox"].x0 + P.x1) / 2, (gruppo[0]["bbox"].y0 + P.y1) / 2)
             clip = None
@@ -309,6 +336,10 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                 if abs((best.x0 + best.x1) / 2 - centro.x) < 0.35 * W and \
                         abs((best.y0 + best.y1) / 2 - centro.y) < 0.35 * H:
                     clip = best
+            if clip is not None:
+                clip = (clip | gruppo[0]["bbox"] | P) & page.rect
+                if clip.width > 0.6 * W or clip.height > 0.6 * H:
+                    clip = None
             if clip is None:
                 clip = fitz.Rect(min(gruppo[0]["bbox"].x0, P.x0) - 20, gruppo[0]["bbox"].y0 - 0.12 * H,
                                  max(P.x1, gruppo[0]["bbox"].x1) + 20, P.y1 + 10) & page.rect
@@ -329,8 +360,8 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                 "dettaglio": dett,
                 "unitario": unit,
                 "prezzo": p,
-                "prezzo_prima": None,
-                "sconto": "",
+                "prezzo_prima": vecchio,
+                "sconto": sconto,
                 "categoria": "Volantino",
                 "nota": bel_nome(flyer.get("title") or "") + f" · pag. {pno + 1}",
                 "immagine": img_url,

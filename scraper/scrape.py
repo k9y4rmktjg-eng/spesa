@@ -385,10 +385,14 @@ def conad_pdf(pdf_bytes, flyer, img_out):
             sc = next((r["t"] for r in intorno if re.search(r"-\s?\d+([,.]\d+)?\s?%", r["t"])), "")
             m = re.search(r"-\s?(\d+)(?:[,.](\d+))?\s?%", sc)
             sconto = f"-{round(float(m.group(1) + '.' + (m.group(2) or '0')))}%" if m else ""
-            if m and not vecchio:
+            if m:  # lo sconto % stampato è il dato più affidabile per ricavare il prezzo pieno
                 pct = float(m.group(1) + "." + (m.group(2) or "0"))
                 if 0 < pct < 90:
-                    vecchio = round(prezzo(pr["t"]) / (1 - pct / 100), 2)
+                    calcolato = round(prezzo(pr["t"]) / (1 - pct / 100), 2)
+                    if not vecchio or abs(vecchio - calcolato) > 0.05:
+                        vecchio = calcolato
+            elif vecchio and vecchio > prezzo(pr["t"]) * 3:
+                vecchio = None
             unit = next((r["t"] for r in intorno if re.search(r"\bal (kg|l|lt|litro|pz)\b|/kg|/l\b", r["t"], re.I)), "")
             # foto: immagine incorporata più vicina, altrimenti ritaglio attorno a nome+prezzo
             centro = fitz.Point((gruppo[0]["bbox"].x0 + P.x1) / 2, (gruppo[0]["bbox"].y0 + P.y1) / 2)

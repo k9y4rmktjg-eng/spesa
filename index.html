@@ -319,7 +319,7 @@ function disegnaChipNegozi(){
   $("#chipNegozi").innerHTML = ids.map(id=>`<button class="chip ${filtro.neg===id?"on":""}" data-neg="${id}">${id==="tutti"?"Tutti":logo(id)+NEG[id].nome}<span class="n">${cnt(id)}</span></button>`).join("");
   const base = DATI.offerte.filter(o=>filtro.neg==="tutti"||o.negozio===filtro.neg);
   const cats = {}; base.forEach(o=>{const c=o.categoria||"Altro"; cats[c]=(cats[c]||0)+1;});
-  const top = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const top = Object.entries(cats).sort((a,b)=>(a[0]==="Altro")-(b[0]==="Altro") || b[1]-a[1]);
   if(filtro.cat!=="tutte" && !cats[filtro.cat]) filtro.cat="tutte";
   $("#chipCat").innerHTML = top.length>1 ? [`<button class="chip ${filtro.cat==="tutte"?"on":""}" data-cat="tutte">Tutte le categorie</button>`,
     ...top.map(([c,n])=>`<button class="chip ${filtro.cat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}<span class="n">${n}</span></button>`)].join("") : "";

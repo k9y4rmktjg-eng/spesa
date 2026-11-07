@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Spesa di Famiglia</title>
+<meta name="theme-color" content="#F6F1E7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14130F" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Spesa">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+:root{
+  --bg:#F6F1E7; --bg2:#EFE7D8; --card:#FFFDF8; --ink:#1E1D19; --ink2:#5D594F; --ink3:#948E80;
+  --line:#E4DBC9; --accent:#1F6B4A; --accent-ink:#fff; --accent-soft:#DCEBDF;
+  --warn:#B4541A; --warn-soft:#F8E3D3; --ok:#1F6B4A;
+  --lidl:#0050AA; --conad:#E30613; --coop:#D3001C; --altro:#7A6A4F;
+  --r:18px; --shadow:0 1px 2px rgba(40,30,10,.06),0 6px 18px rgba(40,30,10,.07);
+  --safe-b:env(safe-area-inset-bottom); --safe-t:env(safe-area-inset-top);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#14130F;--bg2:#1D1B16;--card:#23211B;--ink:#F3EEE3;--ink2:#C2BBAD;--ink3:#8C8678;
+    --line:#35322A;--accent:#57B98A;--accent-ink:#0E1A13;--accent-soft:#1F3328;--warn:#F0A06A;--warn-soft:#3A2A1E;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px rgba(0,0,0,.35);}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;padding-bottom:calc(84px + var(--safe-b))}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+img{display:block}
+.serif{font-family:Fraunces,Georgia,serif}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);padding:calc(10px + var(--safe-t)) 16px 10px;border-bottom:1px solid transparent;transition:border-color .2s}
+header.scrolled{border-bottom-color:var(--line)}
+.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:30px;letter-spacing:-.02em;margin:0;line-height:1.05}
+.sub{color:var(--ink3);font-size:13px;margin-top:2px}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2);background:var(--card);border:1px solid var(--line);padding:5px 10px;border-radius:99px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink3)}
+.dot.on{background:#2FA36B;box-shadow:0 0 0 3px color-mix(in srgb,#2FA36B 25%,transparent)}
+.dot.warn{background:var(--warn)}
+
+.search{margin-top:12px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0 12px;height:44px}
+.search input{flex:1;border:0;background:transparent;outline:0;height:100%;font-size:16px}
+.search svg{flex:none;opacity:.5}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 16px 2px;margin:0 -16px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--ink2);transition:transform .1s}
+.chip:active{transform:scale(.96)}
+.chip .n{font-weight:500;color:var(--ink3);font-size:12px}
+.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.chip.on .n{color:inherit;opacity:.7}
+.chip .logo{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;color:#fff;font-size:10px;font-weight:800}
+.chips.small .chip{height:30px;font-size:13px;font-weight:500}
+
+main{padding:6px 16px 20px}
+.view{display:none}.view.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* avvisi */
+.notice{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);color:var(--ink);border-radius:14px;padding:12px 14px;font-size:14px;margin:10px 0}
+.notice b{color:var(--warn)}
+.notice.info{background:var(--accent-soft)}
+.notice.info b{color:var(--accent)}
+
+/* griglia offerte */
+.bar{display:flex;align-items:center;justify-content:space-between;margin:12px 2px 10px;color:var(--ink3);font-size:13px}
+.bar select{background:transparent;border:0;color:var(--ink2);font-weight:600;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media(min-width:620px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr)}main,header{max-width:1100px;margin:0 auto}}
+.card{position:relative;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;content-visibility:auto;contain-intrinsic-size:280px}
+.ph{position:relative;aspect-ratio:1/1;background:#fff;display:grid;place-items:center;overflow:hidden}
+@media (prefers-color-scheme: dark){.ph{background:#F4F1EA}}
+.ph img{width:100%;height:100%;object-fit:contain;padding:10px;transition:opacity .3s}
+.ph .emoji{font-size:46px}
+.badge{position:absolute;top:8px;left:8px;padding:3px 7px;border-radius:7px;font-size:11px;font-weight:800;color:#fff;letter-spacing:.02em}
+.sconto{position:absolute;top:8px;right:8px;background:#FFE14D;color:#1E1D19;font-weight:800;font-size:12px;padding:3px 7px;border-radius:7px;transform:rotate(3deg)}
+.info{padding:10px 11px 11px;display:flex;flex-direction:column;flex:1;gap:2px}
+.nome{font-weight:650;font-size:14px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.det{color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prezzi{display:flex;align-items:baseline;gap:6px;margin-top:auto;padding-top:6px}
+.prezzo{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:22px;letter-spacing:-.01em}
+.prima{color:var(--ink3);text-decoration:line-through;font-size:13px}
+.add{position:absolute;right:8px;bottom:8px;width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;box-shadow:0 3px 10px rgba(31,107,74,.35);transition:transform .15s}
+.add:active{transform:scale(.88)}
+.add.in{background:var(--ink);color:var(--bg);font-weight:800;font-size:15px}
+.empty{text-align:center;color:var(--ink3);padding:50px 20px}
+.empty .big{font-size:52px;margin-bottom:8px}
+.more{display:block;margin:18px auto 0;padding:12px 20px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-weight:600}
+
+/* lista */
+.addbox{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:12px;margin-top:10px}
+.addrow{display:flex;gap:8px}
+.addrow input{flex:1;min-width:0;height:44px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--bg);outline:0}
+.addrow input.p{flex:0 0 84px}
+.btn{height:44px;padding:0 16px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-weight:700}
+.btn.ghost{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.sm{height:36px;padding:0 12px;font-size:14px}
+.totale{display:flex;justify-content:space-between;align-items:center;margin:18px 2px 6px}
+.totale .serif{font-size:26px}
+.grp{margin-top:14px}
+.grph{display:flex;align-items:center;justify-content:space-between;margin:0 4px 8px;font-weight:700}
+.grph span:last-child{color:var(--ink2);font-weight:600;font-size:14px}
+.grph .logo{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;color:#fff;font-size:11px;font-weight:800;margin-right:8px;vertical-align:-5px}
+.items{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.it{display:flex;align-items:center;gap:10px;padding:10px 12px;border-top:1px solid var(--line);transition:opacity .2s}
+.it:first-child{border-top:0}
+.chk{flex:none;width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;transition:all .15s}
+.it.done .chk{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.it.done{opacity:.5}
+.it.done .t1{text-decoration:line-through}
+.thumb{flex:none;width:46px;height:46px;border-radius:10px;background:#fff;object-fit:contain;display:grid;place-items:center;font-size:24px;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:contain}
+.tx{flex:1;min-width:0}
+.t1{font-weight:600;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.t2{color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qty{display:flex;align-items:center;background:var(--bg);border-radius:99px;flex:none}
+.qty button{width:30px;height:30px;display:grid;place-items:center;font-weight:700;color:var(--ink2)}
+.qty span{min-width:18px;text-align:center;font-weight:700;font-size:14px}
+.ip{flex:none;min-width:54px;text-align:right;font-weight:700;font-size:14px}
+.actions{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+
+/* impostazioni */
+.sec{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-top:14px}
+.sec h3{margin:0 0 4px;font-family:Fraunces,Georgia,serif;font-size:19px}
+.sec p{margin:4px 0 12px;color:var(--ink2);font-size:14px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.field label{font-size:13px;color:var(--ink3);font-weight:600}
+.field input{height:46px;border:1px solid var(--line);border-radius:12px;padding:0 12px;background:var(--bg);outline:0;font-size:16px}
+.store{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.store:first-of-type{border-top:0}
+.store .logo{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:#fff;font-weight:800}
+.store .tx a{color:var(--accent);font-size:13px;font-weight:600;text-decoration:none}
+.pill{font-size:12px;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.pill.ko{background:var(--warn-soft);color:var(--warn)}
+.pill.wait{background:var(--bg2);color:var(--ink3)}
+ol.how{margin:6px 0 0;padding-left:20px;color:var(--ink2);font-size:14px}
+ol.how li{margin:4px 0}
+
+/* tab bar */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-around;padding:8px 10px calc(8px + var(--safe-b));background:color-mix(in srgb,var(--card) 90%,transparent);backdrop-filter:saturate(1.4) blur(16px);-webkit-backdrop-filter:saturate(1.4) blur(16px);border-top:1px solid var(--line)}
+nav button{flex:1;max-width:140px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:var(--ink3);padding:4px 0;position:relative}
+nav button.on{color:var(--accent)}
+nav .cnt[hidden]{display:none}
+nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--conad);color:#fff;font-size:11px;display:grid;place-items:center;padding:0 5px}
+
+/* foglio dettaglio */
+.sheet-bg{position:fixed;inset:0;background:rgba(20,15,5,.45);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;background:var(--card);border-radius:24px 24px 0 0;padding:10px 18px calc(18px + var(--safe-b));transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.9,.2,1);max-height:92vh;overflow:auto;max-width:640px;margin:0 auto}
+.sheet.on{transform:none}
+.chiudi{position:absolute;top:12px;right:14px;width:34px;height:34px;border-radius:50%;background:var(--bg2);font-weight:700;color:var(--ink2);z-index:2}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.sheet .ph{border-radius:18px;aspect-ratio:4/3}
+.sheet h2{font-family:Fraunces,Georgia,serif;margin:14px 0 2px;font-size:24px;line-height:1.15}
+.sheet .prezzo{font-size:34px}
+.sheet .meta{color:var(--ink2);font-size:14px;margin:6px 0}
+.sheet .row{display:flex;gap:10px;margin-top:16px}
+.sheet .row .btn{flex:1;height:50px;font-size:16px}
+.toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;transition:all .25s;z-index:60;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+<header id="hdr">
+  <div class="top">
+    <div>
+      <h1 id="titolo">Offerte</h1>
+      <div class="sub" id="sottotitolo">Nonantola</div>
+    </div>
+    <button class="sync" id="syncBadge" onclick="vai('imp')"><span class="dot" id="syncDot"></span><span id="syncTxt">…</span></button>
+  </div>
+  <div id="hdrOfferte">
+    <label class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Cerca: latte, caffè, pasta…" autocomplete="off">
+    </label>
+    <div class="chips" id="chipNegozi"></div>
+    <div class="chips small" id="chipCat"></div>
+  </div>
+</header>
+
+<main>
+  <section class="view on" id="v-off">
+    <div id="avvisi"></div>
+    <div class="bar"><span id="conteggio"></span>
+      <select id="ordina" aria-label="Ordina">
+        <option value="sconto">Più scontati</option>
+        <option value="prezzo">Prezzo più basso</option>
+        <option value="nome">Nome A–Z</option>
+        <option value="scade">In scadenza</option>
+      </select>
+    </div>
+    <div class="grid" id="grid"></div>
+    <button class="more" id="more" hidden>Mostra altre offerte</button>
+  </section>
+
+  <section class="view" id="v-lista">
+    <div class="addbox">
+      <div class="addrow">
+        <input id="nuovo" placeholder="Aggiungi a mano (es. pane)" enterkeyhint="done">
+        <input id="nuovoP" class="p" inputmode="decimal" placeholder="€">
+        <button class="btn" id="btnAdd" aria-label="Aggiungi">+</button>
+      </div>
+      <div class="chips small" id="chipDove" style="padding-bottom:0"></div>
+    </div>
+    <div class="totale"><span class="sub" id="contaLista"></span><span class="serif" id="totLista"></span></div>
+    <div id="lista"></div>
+    <div class="actions">
+      <button class="btn ghost sm" id="btnShare">📤 Invia la lista</button>
+      <button class="btn ghost sm" id="btnPulisci">🧹 Togli i presi</button>
+      <button class="btn ghost sm" id="btnSvuota">Svuota tutto</button>
+    </div>
+  </section>
+
+  <section class="view" id="v-imp">
+    <div class="sec">
+      <h3>La tua famiglia</h3>
+      <p id="impStato"></p>
+      <div class="field"><label for="impNome">Il tuo nome (si vede accanto ai prodotti che aggiungi)</label><input id="impNome" placeholder="Es. Alessandro" autocomplete="given-name"></div>
+      <div class="field"><label for="impPin">Codice famiglia (uguale su tutti i telefoni di casa)</label><input id="impPin" placeholder="Es. caruso-spesa-2026" autocapitalize="none" autocomplete="off"></div>
+      <button class="btn" id="btnSalva">Salva e collega</button>
+    </div>
+    <div class="sec">
+      <h3>Negozi</h3>
+      <p id="impAgg"></p>
+      <div id="impNegozi"></div>
+    </div>
+    <div class="sec">
+      <h3>Installa sull'iPhone</h3>
+      <ol class="how">
+        <li>Apri questa pagina con <b>Safari</b>.</li>
+        <li>Tocca il pulsante <b>Condividi</b> (quadrato con la freccia).</li>
+        <li>Scegli <b>Aggiungi alla schermata Home</b>, poi <b>Aggiungi</b>.</li>
+        <li>Apri l'app dall'icona: la prima volta inserisci nome e codice famiglia.</li>
+      </ol>
+    </div>
+    <p class="sub" style="text-align:center;margin-top:18px">Spesa di Famiglia · offerte aggiornate in automatico ogni lunedì e giovedì</p>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-v="off"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5" fill="currentColor"/></svg>Offerte</button>
+  <button data-v="lista"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14l-1.4 11.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8z"/><path d="M9 7a3 3 0 0 1 6 0"/></svg>Lista<span class="cnt" id="cntLista" hidden></span></button>
+  <button data-v="imp"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="9.5" r="2.4"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M15 14.6c2.6-.4 4.8 1.1 5.4 4.4"/></svg>Famiglia</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
+
+<script type="module">
+const CFG = window.SPESA_CONFIG || {};
+const $ = s => document.querySelector(s);
+const NEG = {
+  lidl:{nome:"Lidl",colore:"#0050AA",sigla:"L"}, conad:{nome:"Conad",colore:"#E30613",sigla:"C"},
+  coop:{nome:"Coop",colore:"#D3001C",sigla:"Co"}, altro:{nome:"Altro",colore:"#7A6A4F",sigla:"•"}
+};
+const euro = v => v==null||isNaN(v) ? "" : v.toLocaleString("it-IT",{style:"currency",currency:"EUR"});
+const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const oggi = new Date().toISOString().slice(0,10);
+const LS = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},
+            set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
+const dataIt = s => { if(!s) return ""; const d=new Date(s+"T12:00:00"); return d.toLocaleDateString("it-IT",{day:"numeric",month:"short"}); };
+
+/* ---------- emoji di ripiego per prodotti senza foto ---------- */
+const EMOJI = [[/latt|yogurt|kefir|burro|panna/,"🥛"],[/formagg|parmig|grana|mozzar|stracch|pecorin/,"🧀"],[/pane|grissin|crack|fette|biscott|cracker/,"🍞"],
+ [/pasta|spaghett|penne|fusill|farfall|tortell|lasagn/,"🍝"],[/riso|risotto/,"🍚"],[/caff|espresso/,"☕"],[/t[eè] |camomill|tisan/,"🍵"],
+ [/vino|prosecco|spumant|birra/,"🍷"],[/acqua|bibit|succo|cola|aranciat/,"🥤"],[/pollo|carne|manzo|suin|bovin|hamburger|salsicc|wurstel|petto/,"🍗"],
+ [/pesce|salmone|tonno|merluz|gamber|cozz/,"🐟"],[/prosciut|salame|mortadell|speck|bresaol|coppa|pancett|guancial/,"🥓"],[/uova|uovo/,"🥚"],
+ [/mela|pera|banan|arancia|frutta|uva|kiwi|mandarin|clementin/,"🍎"],[/insalat|zucchin|pomodor|carot|patat|verdur|cipoll|carciof|spinac/,"🥬"],
+ [/olio/,"🫒"],[/cioccol|nutella|merendin|dolc|panetton|pandoro|torta/,"🍫"],[/gelat/,"🍨"],[/detersiv|ammorbid|pulit|sapone|bagnoschiuma|shampoo|dentifric|carta igien|scottex|rotoli/,"🧴"],
+ [/pannolin|bimb/,"🍼"],[/cane|gatto|croccant/,"🐾"]];
+const emojiPer = n => { const s=(n||"").toLowerCase(); for(const [re,e] of EMOJI) if(re.test(s)) return e; return "🛒"; };
+
+/* ---------- stato ---------- */
+let DATI = {negozi:[],offerte:[]};
+let filtro = {neg:"tutti",cat:"tutte",q:"",ord:"sconto",limite:40};
+let LISTA = [];          // voci della lista
+let DOVE = LS.get("dove","altro");
+let sync = {mode:"local",ok:false,col:null,fs:null};
+const nomeUtente = () => LS.get("nome","");
+
+/* ---------- offerte ---------- */
+async function caricaOfferte(){
+  try{
+    const r = await fetch("data/offerte.json?t="+Date.now(),{cache:"no-store"});
+    DATI = await r.json(); LS.set("cacheOfferte",DATI);
+  }catch{ DATI = LS.get("cacheOfferte",DATI); }
+  DATI.offerte = (DATI.offerte||[]).filter(o=>!o.al || o.al>=oggi);
+  for(const o of DATI.offerte){
+    o._pct = o.prezzo_prima && o.prezzo_prima>o.prezzo ? Math.round((1-o.prezzo/o.prezzo_prima)*100)
+      : (parseInt((o.sconto||"").replace(/[^\d]/g,""))||0);
+    o._s = (o.nome+" "+(o.marca||"")+" "+(o.dettaglio||"")+" "+(o.categoria||"")).toLowerCase();
+  }
+  disegnaChipNegozi(); disegnaOfferte(); disegnaAvvisi(); disegnaImpNegozi();
+  const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
+  $("#sottotitolo").textContent = (CFG.zona||"Nonantola") + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
+}
+
+function logo(id,size){ const n=NEG[id]||NEG.altro; return `<span class="logo" style="background:${n.colore}${size?`;width:${size}px;height:${size}px`:""}">${n.sigla}</span>`; }
+
+function disegnaChipNegozi(){
+  const cnt = id => DATI.offerte.filter(o=>id==="tutti"||o.negozio===id).length;
+  const ids = ["tutti",...Object.keys(NEG).filter(k=>k!=="altro")];
+  $("#chipNegozi").innerHTML = ids.map(id=>`<button class="chip ${filtro.neg===id?"on":""}" data-neg="${id}">${id==="tutti"?"Tutti":logo(id)+NEG[id].nome}<span class="n">${cnt(id)}</span></button>`).join("");
+  const base = DATI.offerte.filter(o=>filtro.neg==="tutti"||o.negozio===filtro.neg);
+  const cats = {}; base.forEach(o=>{const c=o.categoria||"Altro"; cats[c]=(cats[c]||0)+1;});
+  const top = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  if(filtro.cat!=="tutte" && !cats[filtro.cat]) filtro.cat="tutte";
+  $("#chipCat").innerHTML = top.length>1 ? [`<button class="chip ${filtro.cat==="tutte"?"on":""}" data-cat="tutte">Tutte le categorie</button>`,
+    ...top.map(([c,n])=>`<button class="chip ${filtro.cat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}<span class="n">${n}</span></button>`)].join("") : "";
+}
+
+function offerteFiltrate(){
+  const q = filtro.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  let l = DATI.offerte.filter(o=>(filtro.neg==="tutti"||o.negozio===filtro.neg)
+    && (filtro.cat==="tutte"||(o.categoria||"Altro")===filtro.cat) && q.every(w=>o._s.includes(w)));
+  const ord = {sconto:(a,b)=>b._pct-a._pct||a.prezzo-b.prezzo, prezzo:(a,b)=>a.prezzo-b.prezzo,
+    nome:(a,b)=>a.nome.localeCompare(b.nome,"it"), scade:(a,b)=>(a.al||"9").localeCompare(b.al||"9")}[filtro.ord];
+  return l.sort(ord);
+}
+
+function qtaInLista(id){ return LISTA.filter(v=>v.offertaId===id && !v.fatto).reduce((s,v)=>s+(v.qta||1),0); }
+
+function cardHTML(o){
+  const n = NEG[o.negozio]||NEG.altro, q = qtaInLista(o.id);
+  const img = o.immagine ? `<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="${esc(o.immagine)}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'emoji',textContent:'${emojiPer(o.nome)}'}))">`
+    : `<span class="emoji">${emojiPer(o.nome)}</span>`;
+  const sc = o.sconto || (o._pct ? "-"+o._pct+"%" : "");
+  return `<article class="card" data-id="${esc(o.id)}">
+    <div class="ph">${img}<span class="badge" style="background:${n.colore}">${n.nome}</span>${sc?`<span class="sconto">${esc(sc)}</span>`:""}</div>
+    <div class="info"><div class="nome">${esc(o.nome)}</div>
+      <div class="det">${esc([o.marca,o.dettaglio].filter(Boolean).join(" · ")||o.nota||"")}</div>
+      <div class="prezzi"><span class="prezzo">${euro(o.prezzo)}</span>${o.prezzo_prima?`<span class="prima">${euro(o.prezzo_prima)}</span>`:""}</div>
+      <div class="det">${o.al?"fino al "+dataIt(o.al):""}</div>
+    </div>
+    <button class="add ${q?"in":""}" data-add="${esc(o.id)}" aria-label="Aggiungi alla lista">${q?q:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`}</button>
+  </article>`;
+}
+
+function disegnaOfferte(){
+  const l = offerteFiltrate();
+  $("#conteggio").textContent = l.length ? `${l.length} offerte` : "";
+  if(!DATI.offerte.length){
+    $("#grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🧺</div><b>Le offerte arriveranno col primo aggiornamento</b><br>Intanto puoi già usare la lista della spesa.</div>`;
+    $("#more").hidden = true; return;
+  }
+  if(!l.length){ $("#grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🔎</div>Nessuna offerta trovata.<br>Puoi aggiungerlo a mano nella Lista.</div>`; $("#more").hidden=true; return; }
+  $("#grid").innerHTML = l.slice(0,filtro.limite).map(cardHTML).join("");
+  $("#more").hidden = l.length<=filtro.limite;
+}
+
+function disegnaAvvisi(){
+  const ko = (DATI.negozi||[]).filter(n=>n.ok===false);
+  $("#avvisi").innerHTML = ko.map(n=>`<div class="notice"><span>⚠️</span><div><b>${esc(n.nome)}: offerte non aggiornate.</b> ${n.n?`Mostro quelle dell'ultima volta.`:""} Guarda il <a href="${esc(n.volantino)}" target="_blank" rel="noopener">volantino ufficiale</a>.</div></div>`).join("");
+}
+
+/* ---------- foglio dettaglio ---------- */
+function apriDettaglio(id){
+  const o = DATI.offerte.find(x=>x.id===id); if(!o) return;
+  const n = NEG[o.negozio]||NEG.altro;
+  $("#sheet").innerHTML = `<div class="grab"></div><button class="chiudi" id="shX" aria-label="Chiudi">✕</button>
+    <div class="ph">${o.immagine?`<img src="${esc(o.immagine)}" referrerpolicy="no-referrer" alt="">`:`<span class="emoji" style="font-size:80px">${emojiPer(o.nome)}</span>`}
+      <span class="badge" style="background:${n.colore}">${n.nome}</span>${o.sconto||o._pct?`<span class="sconto">${esc(o.sconto||"-"+o._pct+"%")}</span>`:""}</div>
+    <h2>${esc(o.nome)}</h2>
+    <div class="meta">${esc([o.marca,o.dettaglio].filter(Boolean).join(" · "))}</div>
+    <div class="prezzi"><span class="prezzo">${euro(o.prezzo)}</span>${o.prezzo_prima?`<span class="prima">${euro(o.prezzo_prima)}</span>`:""}</div>
+    <div class="meta">${esc(o.unitario||"")}</div>
+    <div class="meta">${o.dal||o.al?`📅 ${o.dal?"dal "+dataIt(o.dal)+" ":""}${o.al?"al "+dataIt(o.al):""}`:""}</div>
+    <div class="meta">${esc(o.nota||"")}</div>
+    <div class="row"><button class="btn" id="shAdd">Aggiungi alla lista</button>${o.link?`<a class="btn ghost" style="display:grid;place-items:center;text-decoration:none;flex:0 0 auto" href="${esc(o.link)}" target="_blank" rel="noopener">Sito</a>`:""}</div>`;
+  $("#shX").onclick = chiudiSheet;
+  $("#shAdd").onclick = ()=>{ aggiungiOfferta(o); chiudiSheet(); };
+  $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on");
+}
+function chiudiSheet(){ $("#sheetBg").classList.remove("on"); $("#sheet").classList.remove("on"); }
+$("#sheetBg").onclick = chiudiSheet;
+let y0=null; $("#sheet").addEventListener("touchstart",e=>{y0=e.touches[0].clientY},{passive:true});
+$("#sheet").addEventListener("touchend",e=>{ if(y0!=null && e.changedTouches[0].clientY-y0>90 && $("#sheet").scrollTop<=0) chiudiSheet(); y0=null; });
+
+/* ---------- lista: archivio (Firebase o locale) ---------- */
+const nuovoId = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const store = {
+  async add(v){ if(sync.mode==="cloud") return sync.fs.setDoc(sync.fs.doc(sync.col,v.id),v); LISTA.push(v); salvaLocale(); },
+  async upd(id,ch){ if(sync.mode==="cloud") return sync.fs.updateDoc(sync.fs.doc(sync.col,id),ch); Object.assign(LISTA.find(v=>v.id===id)||{},ch); salvaLocale(); },
+  async del(ids){ if(sync.mode==="cloud"){ const b=sync.fs.writeBatch(sync.db); ids.forEach(id=>b.delete(sync.fs.doc(sync.col,id))); return b.commit(); }
+    LISTA = LISTA.filter(v=>!ids.includes(v.id)); salvaLocale(); }
+};
+function salvaLocale(){ LS.set("listaLocale",LISTA); aggiornaTutto(); }
+
+function aggiungiOfferta(o){
+  const ex = LISTA.find(v=>v.offertaId===o.id && !v.fatto);
+  if(ex) store.upd(ex.id,{qta:(ex.qta||1)+1});
+  else store.add({id:nuovoId(),nome:o.nome,negozio:o.negozio,prezzo:o.prezzo,qta:1,fatto:false,
+    immagine:o.immagine||"",offertaId:o.id,dettaglio:[o.marca,o.dettaglio].filter(Boolean).join(" · "),al:o.al||"",chi:nomeUtente(),creato:Date.now()});
+  toast(`Aggiunto: ${o.nome}`); if(navigator.vibrate) navigator.vibrate(10);
+}
+function aggiungiManuale(){
+  const nome = $("#nuovo").value.trim(); if(!nome) return;
+  const p = parseFloat($("#nuovoP").value.replace(",","."));
+  store.add({id:nuovoId(),nome,negozio:DOVE,prezzo:isNaN(p)?null:p,qta:1,fatto:false,immagine:"",offertaId:"",dettaglio:"",al:"",chi:nomeUtente(),creato:Date.now()});
+  $("#nuovo").value=""; $("#nuovoP").value=""; $("#nuovo").focus();
+}
+
+function disegnaLista(){
+  const aperte = LISTA.filter(v=>!v.fatto).length;
+  $("#cntLista").hidden = !aperte; $("#cntLista").textContent = aperte;
+  $("#chipDove").innerHTML = Object.keys(NEG).map(id=>`<button class="chip ${DOVE===id?"on":""}" data-dove="${id}">${logo(id)}${NEG[id].nome}</button>`).join("");
+  if(!LISTA.length){ $("#lista").innerHTML = `<div class="empty"><div class="big">📝</div><b>La lista è vuota</b><br>Tocca <b>+</b> sulle offerte o scrivi qui sopra.</div>`;
+    $("#totLista").textContent=""; $("#contaLista").textContent=""; return; }
+  const tot = LISTA.filter(v=>!v.fatto).reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0);
+  $("#totLista").textContent = euro(tot);
+  $("#contaLista").textContent = `${aperte} da prendere · ${LISTA.length-aperte} presi`;
+  const gruppi = {}; LISTA.forEach(v=>{(gruppi[v.negozio||"altro"] ??= []).push(v)});
+  $("#lista").innerHTML = Object.keys(NEG).filter(k=>gruppi[k]).map(k=>{
+    const vv = gruppi[k].sort((a,b)=>(a.fatto-b.fatto)||(a.creato-b.creato));
+    const sub = vv.filter(v=>!v.fatto).reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0);
+    return `<div class="grp"><div class="grph"><span>${logo(k)}${NEG[k].nome}</span><span>${sub?euro(sub):""}</span></div><div class="items">${vv.map(v=>`
+      <div class="it ${v.fatto?"done":""}" data-it="${v.id}">
+        <button class="chk" data-chk="${v.id}" aria-label="Preso">${v.fatto?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>`:""}</button>
+        <div class="thumb">${v.immagine?`<img src="${esc(v.immagine)}" referrerpolicy="no-referrer" loading="lazy" alt="">`:emojiPer(v.nome)}</div>
+        <div class="tx" data-chk="${v.id}"><div class="t1">${esc(v.nome)}</div><div class="t2">${esc([v.dettaglio, v.al&&v.al<oggi?"offerta scaduta":"", v.chi?"da "+v.chi:""].filter(Boolean).join(" · "))}</div></div>
+        <div class="qty"><button data-meno="${v.id}" aria-label="Meno">−</button><span>${v.qta||1}</span><button data-piu="${v.id}" aria-label="Più">+</button></div>
+        <div class="ip">${v.prezzo!=null?euro(v.prezzo*(v.qta||1)):""}</div>
+      </div>`).join("")}</div></div>`;
+  }).join("");
+}
+
+function aggiornaTutto(){ disegnaLista(); if($("#v-off").classList.contains("on")) disegnaOfferte(); }
+
+/* ---------- Firebase ---------- */
+async function sha256(t){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+let unsub = null;
+async function collega(){
+  const pin = (LS.get("pin","")||"").trim().toLowerCase();
+  const fb = CFG.firebase||{};
+  if(unsub){ unsub(); unsub=null; }
+  if(!fb.apiKey || !pin){
+    sync = {mode:"local"}; LISTA = LS.get("listaLocale",[]); statoSync(); aggiornaTutto(); return;
+  }
+  try{
+    statoSync("Collegamento…");
+    const V="10.12.2";
+    const app = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-app.js`);
+    const fs = await import(`https://www.gstatic.com/firebasejs/${V}/firebase-firestore.js`);
+    const a = app.getApps().length ? app.getApp() : app.initializeApp(fb);
+    let db; try{ db = fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})}); }catch{ db = fs.getFirestore(a); }
+    const idLista = await sha256("spesa-famiglia:"+pin);
+    const col = fs.collection(db,"liste",idLista,"voci");
+    sync = {mode:"cloud",ok:false,fs,db,col};
+    // porta nella lista di famiglia quello che era già sul telefono
+    const locali = LS.get("listaLocale",[]);
+    if(locali.length){ const b=fs.writeBatch(db); locali.forEach(v=>b.set(fs.doc(col,v.id),v)); await b.commit().catch(()=>{}); LS.set("listaLocale",[]); }
+    unsub = fs.onSnapshot(col,{includeMetadataChanges:true},snap=>{
+      LISTA = snap.docs.map(d=>({id:d.id,...d.data()}));
+      sync.ok = !snap.metadata.fromCache; statoSync(); aggiornaTutto();
+    },err=>{ console.error(err); sync.ok=false; statoSync("Errore: "+(err.code||"rete")); });
+  }catch(e){ console.error(e); sync={mode:"local"}; LISTA=LS.get("listaLocale",[]); statoSync("Non collegato"); aggiornaTutto(); }
+}
+function statoSync(msg){
+  const fb = (CFG.firebase||{}).apiKey;
+  let t, cls="";
+  if(msg){ t=msg; cls="warn"; }
+  else if(sync.mode==="cloud"){ t = sync.ok?"Famiglia":"Offline"; cls = sync.ok?"on":"warn"; }
+  else { t = "Solo qui"; }
+  $("#syncTxt").textContent=t; $("#syncDot").className="dot "+cls;
+  $("#impStato").innerHTML = !fb ? "La lista è salvata <b>solo su questo telefono</b>: manca la configurazione Firebase in <code>config.js</code> (vedi la guida)."
+    : sync.mode==="cloud" ? (sync.ok?"✅ <b>Collegato</b>: la lista è condivisa con chi usa lo stesso codice famiglia.":"Collegato, ma ora senza rete: le modifiche partono appena torna internet.")
+    : "Inserisci lo stesso codice famiglia su tutti i telefoni di casa per condividere la lista.";
+}
+
+/* ---------- impostazioni ---------- */
+function disegnaImpNegozi(){
+  const agg = DATI.aggiornato ? new Date(DATI.aggiornato).toLocaleString("it-IT",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"}) : null;
+  $("#impAgg").textContent = agg ? `Ultimo aggiornamento: ${agg}.` : "Le offerte non sono ancora state scaricate.";
+  $("#impNegozi").innerHTML = (DATI.negozi||[]).map(n=>`<div class="store">${logo(n.id,36)}
+    <div class="tx" style="flex:1"><div class="t1">${esc(n.nome)}</div><div class="t2">${esc(n.negozio||"Offerte nazionali")}</div>
+    <a href="${esc(n.volantino)}" target="_blank" rel="noopener">Volantino ufficiale ›</a></div>
+    <span class="pill ${n.ok===false?"ko":n.ok==null?"wait":""}">${n.ok===false?"non aggiornato":n.ok==null?"in attesa":n.n+" offerte"}</span></div>`).join("");
+}
+$("#impNome").value = nomeUtente(); $("#impPin").value = LS.get("pin","");
+$("#btnSalva").onclick = ()=>{
+  const pin = $("#impPin").value.trim();
+  if(pin && pin.length<8){ toast("Codice troppo corto: almeno 8 caratteri"); return; }
+  LS.set("nome",$("#impNome").value.trim()); LS.set("pin",pin); collega(); toast("Salvato");
+};
+
+/* ---------- navigazione ed eventi ---------- */
+const TITOLI = {off:"Offerte",lista:"La lista",imp:"Famiglia"};
+window.vai = v => {
+  document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on",x.id==="v-"+v));
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  $("#titolo").textContent = TITOLI[v]; $("#hdrOfferte").style.display = v==="off"?"":"none";
+  if(v==="off") disegnaOfferte(); window.scrollTo({top:0});
+};
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>vai(b.dataset.v));
+$("#chipNegozi").onclick = e=>{ const b=e.target.closest("[data-neg]"); if(!b) return; filtro.neg=b.dataset.neg; filtro.cat="tutte"; filtro.limite=40; disegnaChipNegozi(); disegnaOfferte(); };
+$("#chipCat").onclick = e=>{ const b=e.target.closest("[data-cat]"); if(!b) return; filtro.cat=b.dataset.cat; filtro.limite=40; disegnaChipNegozi(); disegnaOfferte(); };
+let tq; $("#q").oninput = e=>{ clearTimeout(tq); tq=setTimeout(()=>{filtro.q=e.target.value; filtro.limite=40; disegnaOfferte();},150); };
+$("#ordina").onchange = e=>{ filtro.ord=e.target.value; disegnaOfferte(); };
+$("#more").onclick = ()=>{ filtro.limite+=40; disegnaOfferte(); };
+$("#grid").onclick = e=>{
+  const a=e.target.closest("[data-add]"); if(a){ const o=DATI.offerte.find(x=>x.id===a.dataset.add); if(o){ aggiungiOfferta(o); } return; }
+  const c=e.target.closest(".card"); if(c) apriDettaglio(c.dataset.id);
+};
+$("#chipDove").onclick = e=>{ const b=e.target.closest("[data-dove]"); if(!b) return; DOVE=b.dataset.dove; LS.set("dove",DOVE); disegnaLista(); };
+$("#btnAdd").onclick = aggiungiManuale;
+$("#nuovo").onkeydown = e=>{ if(e.key==="Enter") aggiungiManuale(); };
+$("#lista").onclick = e=>{
+  const t = e.target.closest("[data-chk],[data-piu],[data-meno]"); if(!t) return;
+  if(t.dataset.chk){ const v=LISTA.find(x=>x.id===t.dataset.chk); store.upd(v.id,{fatto:!v.fatto}); if(navigator.vibrate) navigator.vibrate(8); }
+  else if(t.dataset.piu){ const v=LISTA.find(x=>x.id===t.dataset.piu); store.upd(v.id,{qta:(v.qta||1)+1}); }
+  else if(t.dataset.meno){ const v=LISTA.find(x=>x.id===t.dataset.meno); if((v.qta||1)<=1){ if(confirm(`Togliere "${v.nome}" dalla lista?`)) store.del([v.id]); } else store.upd(v.id,{qta:v.qta-1}); }
+};
+$("#btnPulisci").onclick = ()=>{ const ids=LISTA.filter(v=>v.fatto).map(v=>v.id); if(ids.length) store.del(ids); };
+$("#btnSvuota").onclick = ()=>{ if(LISTA.length && confirm("Svuotare tutta la lista per tutta la famiglia?")) store.del(LISTA.map(v=>v.id)); };
+$("#btnShare").onclick = async ()=>{
+  const g={}; LISTA.filter(v=>!v.fatto).forEach(v=>{(g[v.negozio||"altro"] ??= []).push(v)});
+  const txt = "🛒 Lista della spesa\n" + Object.keys(NEG).filter(k=>g[k]).map(k=>`\n${NEG[k].nome}:\n`+g[k].map(v=>`• ${v.nome}${(v.qta||1)>1?" ×"+v.qta:""}${v.prezzo!=null?" – "+euro(v.prezzo*(v.qta||1)):""}`).join("\n")).join("\n");
+  try{ if(navigator.share) await navigator.share({text:txt}); else { await navigator.clipboard.writeText(txt); toast("Lista copiata"); } }catch{}
+};
+let tt; function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),1600); }
+addEventListener("scroll",()=>$("#hdr").classList.toggle("scrolled",scrollY>4),{passive:true});
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") caricaOfferte(); });
+
+/* ---------- avvio ---------- */
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+LISTA = LS.get("listaLocale",[]); statoSync(); disegnaLista();
+caricaOfferte(); collega();
+if(!nomeUtente() && !LS.get("pin","")) setTimeout(()=>toast("Benvenuto! Imposta nome e codice in Famiglia"),900);
+</script>
+</body>
+</html>

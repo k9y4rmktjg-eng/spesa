@@ -1,0 +1,461 @@
+#!/usr/bin/env python3
+"""
+Scarica le offerte settimanali di Lidl, Conad e Coop (zona Nonantola)
+e scrive data/offerte.json per l'app "Spesa di Famiglia".
+
+Gira da solo su GitHub Actions ogni settimana. Se una catena fallisce,
+le sue offerte precedenti restano e l'app mostra un avviso.
+"""
+import hashlib, io, json, re, shutil, sys, time, traceback
+from datetime import datetime, timezone
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+from playwright.sync_api import sync_playwright
+
+ROOT = Path(__file__).resolve().parent.parent
+DATA = ROOT / "data"
+OUT = DATA / "offerte.json"
+IMG_DIR = DATA / "img"
+CFG = json.loads((ROOT / "scraper" / "negozi.json").read_text(encoding="utf-8"))
+
+UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/130.0 Safari/537.36")
+MIN_OFFERTE = 3  # sotto questa soglia una catena è considerata "non aggiornata"
+
+
+# ---------------------------------------------------------------- utilità
+def log(*a):
+    print(*a, flush=True)
+
+
+def prezzo(v):
+    """'1,39 €' / 1.39 / '~1,50 €~' -> 1.39 (float) oppure None."""
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        return round(float(v), 2) if 0 < v < 5000 else None
+    m = re.search(r"(\d{1,4})[.,](\d{2})", str(v))
+    return round(float(f"{m.group(1)}.{m.group(2)}"), 2) if m else None
+
+
+SIGLE = {"dop", "igp", "doc", "docg", "igt", "uht", "bio", "xl", "xxl"}
+PICCOLE = {"di", "e", "con", "al", "alla", "allo", "alle", "ai", "del", "della",
+           "dei", "delle", "in", "per", "da", "a", "o", "la", "il", "lo", "le", "gli"}
+
+
+def bel_nome(s):
+    """'LO SPAGHETTO N.104 VOIELLO' -> 'Lo Spaghetto N.104 Voiello'."""
+    s = re.sub(r"\s+", " ", (s or "")).strip(" -–")
+    if not s:
+        return s
+    lettere = [c for c in s if c.isalpha()]
+    if lettere and sum(c.isupper() for c in lettere) / len(lettere) > 0.7:
+        parole = s.lower().split(" ")
+        s = " ".join(p if (i and p in PICCOLE) else
+                     (p.upper() if p in SIGLE else p[:1].upper() + p[1:])
+                     for i, p in enumerate(parole))
+    return s
+
+
+def uid(*parti):
+    return hashlib.sha1("|".join(str(p) for p in parti).encode()).hexdigest()[:12]
+
+
+def iso(d):
+    if not d:
+        return None
+    if isinstance(d, (int, float)):
+        return datetime.fromtimestamp(d / 1000, tz=ZoneInfo("Europe/Rome")).date().isoformat()
+    m = re.match(r"(\d{2})/(\d{2})/(\d{4})", str(d))
+    if m:
+        return f"{m.group(3)}-{m.group(2)}-{m.group(1)}"
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", str(d))
+    return m.group(1) if m else None
+
+
+def rifiuta_cookie(page):
+    for testo in ["Rifiuta tutto", "Rifiuta tutti", "Rifiuta", "Continua senza accettare",
+                  "Solo necessari", "Accetta solo i necessari"]:
+        try:
+            b = page.get_by_role("button", name=re.compile(testo, re.I)).first
+            if b.is_visible(timeout=800):
+                b.click(timeout=1500)
+                page.wait_for_timeout(500)
+                return
+        except Exception:
+            pass
+
+
+def scorri(page, volte=8):
+    for _ in range(volte):
+        page.mouse.wheel(0, 2500)
+        page.wait_for_timeout(350)
+
+
+# ---------------------------------------------------------------- LIDL
+def lidl(ctx, n):
+    page = ctx.new_page()
+    page.goto(n["home"], wait_until="domcontentloaded", timeout=60000)
+    page.wait_for_timeout(2500)
+    rifiuta_cookie(page)
+    links = page.eval_on_selector_all(
+        "a[href*='/c/store/']", "els => [...new Set(els.map(a => a.href.split('?')[0].split('#')[0]))]")
+    links = links[: n.get("max_pagine", 25)]
+    log(f"  Lidl: {len(links)} pagine offerte")
+    offerte, visti = [], set()
+    for url in links:
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(1500)
+            scorri(page, 6)
+            raw = page.eval_on_selector_all(
+                "[data-grid-data]", "els => els.map(e => e.getAttribute('data-grid-data'))")
+        except Exception as e:
+            log("   pagina saltata", url, e)
+            continue
+        campagna = url.rstrip("/").split("/")[-2]
+        campagna = re.sub(r"-kw-\d+-\d+$", "", campagna).replace("-", " ").capitalize()
+        for r in raw:
+            try:
+                d = json.loads(r)
+            except Exception:
+                continue
+            nome = d.get("fullTitle") or d.get("title")
+            rp = d.get("regionsPrices") or {}
+            cp = (next(iter(rp.values()), {}) or {}).get("currentPrice") or {}
+            p = prezzo(cp.get("price")) or prezzo((d.get("price") or {}).get("price"))
+            if not nome or not p:
+                continue
+            key = (nome.lower(), p)
+            if key in visti:
+                continue
+            visti.add(key)
+            disc = cp.get("discount") or {}
+            img = d.get("image")
+            if not img:
+                il = d.get("imageList_V1") or d.get("imageList") or []
+                img = il[0].get("image") if il and isinstance(il[0], dict) else None
+            link = d.get("canonicalUrl") or d.get("canonicalPath") or ""
+            if link.startswith("/"):
+                link = "https://www.lidl.it" + link
+            offerte.append({
+                "id": "lidl-" + uid(nome, p, cp.get("endDate")),
+                "negozio": "lidl",
+                "nome": bel_nome(d.get("title") or nome),
+                "marca": bel_nome(((d.get("brand") or {}).get("name")) or ""),
+                "dettaglio": ((cp.get("packaging") or {}).get("text")) or "",
+                "unitario": ((cp.get("basePrice") or {}).get("text")) or "",
+                "prezzo": p,
+                "prezzo_prima": prezzo(cp.get("oldPrice") or disc.get("deletedPrice")),
+                "sconto": disc.get("discountText") or "",
+                "categoria": "Alimentari" if d.get("category") == "Food" else "Casa e altro",
+                "nota": campagna + (" · Lidl Plus" if "plus" in campagna.lower() else ""),
+                "immagine": img,
+                "link": link,
+                "dal": iso(cp.get("startDate") or d.get("storeStartDate")),
+                "al": iso(cp.get("endDate") or d.get("storeEndDate")),
+            })
+    page.close()
+    return offerte
+
+
+# ---------------------------------------------------------------- COOP
+def coop(ctx, n):
+    code = n["codice_negozio"]
+    base = "https://svdgt.coopalleanza3-0.it/apim"
+    page = ctx.new_page()
+    page.goto(n["pagina_negozio"], wait_until="domcontentloaded", timeout=60000)
+    page.wait_for_timeout(2000)
+    rifiuta_cookie(page)
+
+    def get(url):
+        r = ctx.request.get(url, headers={"Referer": n["pagina_negozio"],
+                                          "Accept": "application/json"}, timeout=60000)
+        if not r.ok:
+            raise RuntimeError(f"HTTP {r.status} su {url}")
+        return r.json()
+
+    leaflets = get(f"{base}/leaflets/{code}").get("leaflets", [])
+    log(f"  Coop: {len(leaflets)} volantini")
+    offerte, visti = [], set()
+    for lf in leaflets:
+        lid, titolo = lf["id"], lf.get("titolo") or ""
+        try:
+            cats = {c["code"]: c["descrizione"] for c in
+                    get(f"{base}/{lid}/{code}/categories").get("categories", [])}
+        except Exception:
+            cats = {}
+        promos = get(f"{base}/{lid}/{code}/promos?").get("promos", [])
+        log(f"   {titolo}: {len(promos)} prodotti")
+        for pr in promos:
+            testi = []
+            for k in ("DXTop", "DXBottom", "CXTop", "CXBottom", "SXTop", "SXBottom"):
+                testi += [t for t in ((pr.get(k) or {}).get("txt") or []) if t]
+            vecchio = next((prezzo(t) for t in testi if t.strip().startswith("~")), None)
+            p = next((prezzo(t) for t in testi
+                      if "~" not in t and " al " not in t and "/" not in t and prezzo(t)), None)
+            unit = next((t for t in testi if " al " in t or "/kg" in t or "/l" in t), "")
+            sconto = next((t for t in testi if re.search(r"-\s?\d+\s?%|\dx\d|sconto", t, re.I)), "")
+            nome = pr.get("desc_promo")
+            if not nome or not p:
+                continue
+            key = (nome.lower(), p, lid)
+            if key in visti:
+                continue
+            visti.add(key)
+            offerte.append({
+                "id": "coop-" + uid(pr.get("id"), lid),
+                "negozio": "coop",
+                "nome": bel_nome(nome),
+                "marca": bel_nome(pr.get("brand") or ""),
+                "dettaglio": " · ".join(x for x in [pr.get("desc_promo2"), pr.get("desc_multi")] if x),
+                "unitario": unit,
+                "prezzo": p,
+                "prezzo_prima": vecchio,
+                "sconto": sconto.strip(),
+                "categoria": cats.get(pr.get("categoryCode"), "Altro"),
+                "nota": titolo + (" · " + pr["desc_promo3"] if pr.get("desc_promo3") else ""),
+                "immagine": pr.get("img"),
+                "link": lf.get("url"),
+                "dal": iso(lf.get("valido_da")),
+                "al": iso(lf.get("valido_a")),
+            })
+    page.close()
+    return offerte
+
+
+# ---------------------------------------------------------------- CONAD (PDF)
+RE_PREZZO = re.compile(r"^(?:€\s*)?(\d{1,3})\s?[,.]\s?(\d{2})\s*€?$")
+
+
+def _maiuscolo(t):
+    l = [c for c in t if c.isalpha()]
+    return len(l) >= 3 and sum(c.isupper() for c in l) / len(l) > 0.8
+
+
+def conad_pdf(pdf_bytes, flyer, img_out):
+    try:
+        import pymupdf as fitz
+    except ImportError:
+        import fitz
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    offerte, visti = [], set()
+    for pno, page in enumerate(doc):
+        W, H = page.rect.width, page.rect.height
+        righe = []
+        for b in page.get_text("dict")["blocks"]:
+            for ln in b.get("lines", []):
+                t = "".join(s["text"] for s in ln["spans"]).strip()
+                if not t:
+                    continue
+                size = max(s["size"] for s in ln["spans"])
+                righe.append({"t": t, "size": size, "bbox": fitz.Rect(ln["bbox"]), "blk": id(b)})
+        # prezzi principali = numeri tipo 1,39 con font grande
+        cand = [r for r in righe if RE_PREZZO.match(r["t"].replace(" ", ""))]
+        if not cand:
+            continue
+        soglia = max(r["size"] for r in cand) * 0.45
+        prezzi = [r for r in cand if r["size"] >= soglia]
+        nomi = [r for r in righe if _maiuscolo(r["t"]) and not re.search(r"\d+[,.]\d{2}", r["t"])
+                and r["size"] < max(p["size"] for p in prezzi) and len(r["t"]) <= 60]
+        immagini = [fitz.Rect(i["bbox"]) & page.rect for i in page.get_image_info()
+                    if (fitz.Rect(i["bbox"]) & page.rect).get_area() > 0.004 * W * H
+                    and (fitz.Rect(i["bbox"]) & page.rect).get_area() < 0.5 * W * H]
+        for pr in prezzi:
+            P = pr["bbox"]
+            pc = fitz.Point((P.x0 + P.x1) / 2, (P.y0 + P.y1) / 2)
+            # nome: righe maiuscole sopra al prezzo e vicine
+            vicine = []
+            for r in nomi:
+                R = r["bbox"]
+                if R.y0 > P.y1 + 4:  # sotto al prezzo: no
+                    continue
+                dy = P.y0 - R.y1
+                dx = abs((R.x0 + R.x1) / 2 - pc.x)
+                if dy > 0.30 * H or dx > 0.30 * W:
+                    continue
+                vicine.append((dy + dx * 1.3, r))
+            if not vicine:
+                continue
+            vicine.sort(key=lambda x: x[0])
+            primo = vicine[0][1]
+            gruppo = sorted([r for _, r in vicine
+                             if abs(r["bbox"].x0 - primo["bbox"].x0) < 40
+                             and abs(r["bbox"].y0 - primo["bbox"].y0) < 60],
+                            key=lambda r: r["bbox"].y0)
+            nome = " ".join(r["t"] for r in gruppo)
+            nome = re.sub(r"\s+", " ", nome).strip()
+            if len(nome) < 4:
+                continue
+            p = prezzo(pr["t"])
+            key = (nome.lower(), p)
+            if key in visti:
+                continue
+            visti.add(key)
+            # dettaglio (es. "500 g") e prezzo al kg: righe minuscole subito sotto al nome
+            ultimo = gruppo[-1]["bbox"]
+            sotto = [r["t"] for r in righe if 0 <= r["bbox"].y0 - ultimo.y1 < 40
+                     and abs(r["bbox"].x0 - ultimo.x0) < 50 and not _maiuscolo(r["t"])
+                     and not RE_PREZZO.match(r["t"].replace(" ", ""))]
+            unit = next((s for s in sotto if "/kg" in s or "/lt" in s or "/l " in s), "")
+            dett = next((s for s in sotto if s != unit), "")
+            # foto: immagine incorporata più vicina, altrimenti ritaglio attorno a nome+prezzo
+            centro = fitz.Point((gruppo[0]["bbox"].x0 + P.x1) / 2, (gruppo[0]["bbox"].y0 + P.y1) / 2)
+            clip = None
+            if immagini:
+                best = min(immagini, key=lambda R: abs((R.x0 + R.x1) / 2 - centro.x)
+                           + abs((R.y0 + R.y1) / 2 - centro.y))
+                if abs((best.x0 + best.x1) / 2 - centro.x) < 0.35 * W and \
+                        abs((best.y0 + best.y1) / 2 - centro.y) < 0.35 * H:
+                    clip = best
+            if clip is None:
+                clip = fitz.Rect(min(gruppo[0]["bbox"].x0, P.x0) - 20, gruppo[0]["bbox"].y0 - 0.12 * H,
+                                 max(P.x1, gruppo[0]["bbox"].x1) + 20, P.y1 + 10) & page.rect
+            img_url = None
+            try:
+                zoom = min(3.0, 420 / max(clip.width, 1))
+                pix = page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), clip=clip)
+                nomefile = uid(flyer.get("flyerCode"), nome, p) + ".jpg"
+                pix.save(str(img_out / nomefile), jpg_quality=78)
+                img_url = f"data/img/conad/{nomefile}"
+            except Exception as e:
+                log("    foto non salvata:", e)
+            offerte.append({
+                "id": "conad-" + uid(flyer.get("flyerCode"), nome, p),
+                "negozio": "conad",
+                "nome": bel_nome(nome),
+                "marca": "",
+                "dettaglio": dett,
+                "unitario": unit,
+                "prezzo": p,
+                "prezzo_prima": None,
+                "sconto": "",
+                "categoria": "Volantino",
+                "nota": bel_nome(flyer.get("title") or "") + f" · pag. {pno + 1}",
+                "immagine": img_url,
+                "link": flyer.get("pdfUrl"),
+                "dal": iso(flyer.get("validFrom")),
+                "al": iso(flyer.get("validTo")),
+            })
+    return offerte
+
+
+def conad(ctx, n):
+    page = ctx.new_page()
+    page.goto(n["pagina_negozio"], wait_until="domcontentloaded", timeout=60000)
+    page.wait_for_timeout(3000)
+    rifiuta_cookie(page)
+    scorri(page, 6)
+    flyers = []
+    for raw in page.eval_on_selector_all("[data-flyer]", "els => els.map(e => e.getAttribute('data-flyer'))"):
+        try:
+            flyers.append(json.loads(raw))
+        except Exception:
+            pass
+    # altri volantini del negozio presenti come link
+    links = page.eval_on_selector_all("a[href*='/volantini/']", "els => [...new Set(els.map(a => a.href))]")
+    for url in links[:8]:
+        if any(f.get("slug", "") in url for f in flyers):
+            continue
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(1500)
+            for raw in page.eval_on_selector_all("[data-flyer]", "els => els.map(e => e.getAttribute('data-flyer'))"):
+                try:
+                    flyers.append(json.loads(raw))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    page.close()
+    escl = [e.upper() for e in n.get("escludi_titoli", [])]
+    unici = {}
+    for f in flyers:
+        tit = (f.get("title") or f.get("feTitle") or "").upper()
+        if not f.get("pdfUrl") or any(e in tit for e in escl):
+            continue
+        unici[f.get("flyerCode") or f["pdfUrl"]] = f
+    log(f"  Conad: {len(unici)} volantini da leggere")
+    img_out = IMG_DIR / "conad_new"
+    shutil.rmtree(img_out, ignore_errors=True)
+    img_out.mkdir(parents=True)
+    offerte = []
+    for f in unici.values():
+        r = ctx.request.get(f["pdfUrl"], timeout=120000, headers={"Referer": n["pagina_negozio"]})
+        if not r.ok:
+            log("   PDF non scaricato", r.status, f["pdfUrl"])
+            continue
+        o = conad_pdf(r.body(), f, img_out)
+        log(f"   {f.get('title')}: {len(o)} prodotti")
+        offerte += o
+    if len(offerte) >= MIN_OFFERTE:
+        shutil.rmtree(IMG_DIR / "conad", ignore_errors=True)
+        img_out.rename(IMG_DIR / "conad")
+    else:
+        shutil.rmtree(img_out, ignore_errors=True)
+    return offerte
+
+
+# ---------------------------------------------------------------- main
+FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad}
+
+
+def main():
+    precedente = {}
+    if OUT.exists():
+        try:
+            precedente = json.loads(OUT.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    vecchie = precedente.get("offerte", [])
+    stati_vecchi = {s["id"]: s for s in precedente.get("negozi", [])}
+    ora = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    solo = set(sys.argv[1:])
+
+    risultato, stati = [], []
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(args=["--disable-blink-features=AutomationControlled"])
+        for n in CFG["negozi"]:
+            if solo and n["id"] not in solo:
+                risultato += [o for o in vecchie if o["negozio"] == n["id"]]
+                stati.append(stati_vecchi.get(n["id"], {"id": n["id"]}))
+                continue
+            log(f"== {n['nome']}")
+            ctx = browser.new_context(
+                user_agent=UA, locale="it-IT", timezone_id="Europe/Rome",
+                geolocation={"latitude": 44.6776, "longitude": 11.0410},
+                permissions=["geolocation"], viewport={"width": 1366, "height": 900})
+            t0 = time.time()
+            stato = {"id": n["id"], "nome": n["nome"], "colore": n.get("colore"),
+                     "volantino": n.get("volantino"), "negozio": n.get("negozio", "")}
+            try:
+                off = FUNZIONI[n["tipo"]](ctx, n)
+                if len(off) < MIN_OFFERTE:
+                    raise RuntimeError(f"trovate solo {len(off)} offerte: il sito potrebbe essere cambiato")
+                risultato += off
+                stato.update(ok=True, n=len(off), aggiornato=ora, messaggio="")
+                log(f"  OK {len(off)} offerte in {time.time() - t0:.0f}s")
+            except Exception as e:
+                traceback.print_exc()
+                tenute = [o for o in vecchie if o["negozio"] == n["id"]]
+                risultato += tenute
+                prima = stati_vecchi.get(n["id"], {})
+                stato.update(ok=False, n=len(tenute), aggiornato=prima.get("aggiornato"),
+                             messaggio=str(e)[:200])
+                log(f"  ERRORE: {e} (tengo {len(tenute)} offerte precedenti)")
+            stati.append(stato)
+            ctx.close()
+        browser.close()
+
+    DATA.mkdir(exist_ok=True)
+    OUT.write_text(json.dumps({"zona": CFG["zona"], "aggiornato": ora, "negozi": stati,
+                               "offerte": risultato}, ensure_ascii=False, indent=1), encoding="utf-8")
+    log(f"Scritte {len(risultato)} offerte in {OUT}")
+    # esce con errore solo se TUTTE le catene sono fallite (così GitHub ti avvisa)
+    if not any(s.get("ok") for s in stati if not solo or s.get("id") in solo):
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

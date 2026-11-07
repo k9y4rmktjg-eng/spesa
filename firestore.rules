@@ -1,0 +1,20 @@
+rules_version = '2';
+// Regole del database della lista di famiglia.
+// Ogni famiglia ha una lista il cui indirizzo è l'impronta (SHA-256) del codice famiglia:
+// chi non conosce il codice non può né trovarla né leggerla.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /liste/{lista}/voci/{voce} {
+      allow read: if lista.matches('^[a-f0-9]{64}$');
+      allow delete: if lista.matches('^[a-f0-9]{64}$');
+      allow create, update: if lista.matches('^[a-f0-9]{64}$')
+        && request.resource.data.nome is string
+        && request.resource.data.nome.size() > 0
+        && request.resource.data.nome.size() < 200
+        && request.resource.data.size() < 20;
+    }
+    match /{tutto=**} {
+      allow read, write: if false;
+    }
+  }
+}

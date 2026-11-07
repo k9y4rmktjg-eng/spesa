@@ -1,0 +1,10 @@
+{
+ "zona": "Nonantola (MO) 41015",
+ "aggiornato": null,
+ "negozi": [
+  {"id": "lidl", "nome": "Lidl", "colore": "#0050AA", "ok": null, "n": 0, "messaggio": "In attesa del primo aggiornamento", "volantino": "https://www.lidl.it/c/volantino-lidl/s10018048"},
+  {"id": "conad", "nome": "Conad", "colore": "#E30613", "ok": null, "n": 0, "messaggio": "In attesa del primo aggiornamento", "negozio": "Conad Via Provinciale Est 10, Nonantola", "volantino": "https://www.conad.it/ricerca-negozi/conad-via-provinciale-est-10-41015-nonantola--010318"},
+  {"id": "coop", "nome": "Coop", "colore": "#D3001C", "ok": null, "n": 0, "messaggio": "In attesa del primo aggiornamento", "negozio": "Coop Nonantola, Piazza Ilaria Alpi 15", "volantino": "https://www.coopalleanza3-0.it/fare-spesa/elenco-negozi/dettaglio-negozio/620-nonantola.html"}
+ ],
+ "offerte": []
+}

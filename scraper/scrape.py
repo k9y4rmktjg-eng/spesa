@@ -96,21 +96,21 @@ def scorri(page, volte=8):
 
 # ---------------------------------------------------------------- CATEGORIE comuni ai negozi
 CATEGORIE = [  # (categoria, parole chiave) — l'ordine conta: vince la prima che trova
-    ("Surgelati", r"surgelat|gelat[oi]|ghiacciol|bastoncin|sofficin|findus|pizza.*(congel|surgel)|patatine.*(forno|fritt)|minestrone|frozen"),
+    ("Surgelati", r"surgelat|roncadin|patasnella|pizzoli|bella napoli|gelat[oi]|ghiacciol|bastoncin|sofficin|findus|pizza.*(congel|surgel)|patatine.*(forno|fritt)|minestrone|frozen"),
     ("Infanzia", r"omogeneizz|pannolin|mellin|plasmon|neonat|bimb|baby|latte (in polvere|di crescita|1|2|3)\b|pouch"),
-    ("Animali", r"\bcane\b|\bcani\b|gatt[oi]|croccant|crocchett|lettiera|per animali|pet\b|felix|purina|whiskas|friskies|sheba|gourmet"),
-    ("Cura della persona", r"shampoo|balsamo|bagnoschiuma|doccia|sapone|deodorant|dentifric|spazzolin|collutor|rasoi|schiuma da barba|gillette|crema (viso|mani|corpo)|assorbent|salvaslip|cotton|struccant|igiene intima|lacca|tinta|cosmet|fazzolett"),
-    ("Casa e pulizia", r"detersiv|ammorbid|candeggin|sgrassat|pavimenti|lavastoviglie|piatti|bucato|anticalcare|igienizz|carta igienica|carta da cucina|rotoloni|regina\b|asciugatutto|scottex|tovagliol|rotoli|sacchi|pellicola|alluminio|spugn|dixan|dash|finish|svelto|lysoform|chanteclair|ace\b|swiffer|insetticid|deodorante per ambient|pastiglie|capsule (lavatrice|lavastov)"),
-    ("Bevande", r"\bacqua\b|bibit|cola\b|pepsi|aranciata|chinotto|gassos|succo|nettare|spremut|\bt[eè] (fredd|limone|pesca)|estath|birra|vino|prosecco|spumante|pignoletto|\bdoc\b|docg|\bigt\b|rosé|rosato|lambrusco|champagne|liquor|amaro|grappa|whisky|vodka|gin\b|rum\b|aperitiv|spritz|energy|sciroppo|bevanda (di|al|vegetale)|integratore salin|gatorade|powerade"),
-    ("Caffè, tè e colazione", r"caff[eè]|espresso|lavazza|illy\b|kimbo|segafredo|borbone|capsul|cialde|orzo|cappuccin|\bt[eè]\b|tisan|camomill|infuso|cereali|muesli|fiocchi d|cornflakes|biscott|biscuits|fette biscott|merendin|cornett|brioche|croissant|crostatin|plumcake|marmellat|confettur|nutella|crema spalmabile|miele|cacao|nesquik|pan di stelle|macine|abbracci|gocciole|oro saiwa"),
-    ("Frutta e verdura", r"\bmel[ae]\b|\bpere\b|\bpera\b|banan|arance|\barancia\b|mandarin|clementin|limon|kiwi|\buva\b|frutt[ao] fresc|ananas|fragol|pesche|albicocc|cachi|melagran|avocado|insalat|lattug|rucola|spinac|zucchin|melanzan|peperon|pomodor(i|ino) (fresch|ciliegin|datterin|grappolo)|ciliegin|datterin|carot|patat[ae]\b|cipoll|aglio|finocch|sedano|cavol|broccol|verza|radicchi|funghi|champignon|zucca|carciof|legumi fresch|verdur|ortofrutt|marroni|frutta secca|noci|mandorle|nocciole|pistacch|castagn|datteri"),
+    ("Animali", r"\bcane\b|\bcani\b|gatt[oi]|crocchett|lettiera|per animali|pet\b|felix|purina|whiskas|friskies|sheba|gourmet"),
+    ("Cura della persona", r"shampoo|balsamo|bagnoschiuma|doccia|sapone|deodorant|dentifric|integrator|spazzolin|collutor|rasoi|schiuma da barba|gillette|crema (viso|mani|corpo)|assorbent|salvaslip|cotton|struccant|igiene intima|lacca|tinta|cosmet|fazzolett"),
+    ("Casa e pulizia", r"detersiv|ammorbid|candeggin|sgrassat|pavimenti|lavastoviglie|piatti|bucato|anticalcare|igienizz|carta igienica|carta da cucina|rotoloni|regina\b|asciugatutto|scottex|tovagliol|rotoli|sacchi|pellicola|alluminio|spugn|dixan|dash|finish|coccolino|perlana|mastro lindo|detergent|svelto|lysoform|chanteclair|swiffer|insetticid|deodorante per ambient|pastiglie|capsule (lavatrice|lavastov)"),
+    ("Bevande", r"\bacqua\b|baileys|irish cream|bibit|cola\b|pepsi|aranciata|chinotto|gassos|succo|nettare|spremut|\bt[eè] (fredd|limone|pesca)|estath|birra|vino|prosecco|spumante|pignoletto|\bdoc\b|docg|\bigt\b|rosé|rosato|lambrusco|champagne|liquor|amaro|grappa|whisky|vodka|gin\b|rum\b|aperitiv|spritz|energy|sciroppo|bevanda (di|al|vegetale)|integratore salin|gatorade|powerade"),
+    ("Caffè, tè e colazione", r"caff[eè]|nescaf|twinings|\btea\b|espresso|lavazza|illy\b|kimbo|segafredo|borbone|capsul|cialde|orzo|cappuccin|\bt[eè]\b|tisan|camomill|infuso|cereali|muesli|fiocchi d|cornflakes|biscott|biscuits|fette biscott|merendin|cornett|brioche|croissant|crostatin|plumcake|marmellat|confettur|nutella|nocciolato|crema novi|skippy|crema spalmabile|miele|cacao|nesquik|pan di stelle|macine|abbracci|gocciole|oro saiwa"),
+    ("Frutta e verdura", r"\bmel[ae]\b|\bpere\b|\bpera\b|banan|arance|\barancia\b|mandarin|clementin|limon|kiwi|\buva\b|frutt[ao] fresc|ananas|fragol|pesche|albicocc|cachi|melagran|avocado|insalat|lattug|rucola|spinac|zucchin|melanzan|peperon|pomodor(i|ino) (fresch|ciliegin|datterin|grappolo)|ciliegin|datterin|carot|patat[ae]\b|cipoll|aglio|finocch|sedano|cavol|broccol|verza|radicchi|funghi|champignon|zucca|carciof|legumi fresch|verdur|ortofrutt|marroni|prugne|frutta secca|noci|mandorle|nocciole|pistacch|castagn|datteri"),
     ("Carne e pesce", r"pollo|tacchino|manzo|bovino|vitell|suino|maiale|lonza|braciol|salsicc|hamburger|polpett|macinat|bistecc|fettin|cotolett|arrost|spezzatin|petto di|cosce|sovracosc|ali di|agnell|coniglio|wurstel|würstel|pesce|salmone|tonno fresc|merluzz|nasell|orata|branzin|spigol|gamber|cozze|vongol|calamar|seppi|polp[oi]|filetti di|baccal|sgombr|alici|acciugh|sardin|surimi|pepite|nuggets|cordon"),
-    ("Salumi e formaggi", r"prosciutt|salam|mortadell|speck|bresaol|coppa\b|pancett|guancial|culatell|cotechino|zampone|spalla cotta|affettat|formagg|parmigian|grana|pecorin|gorgonzol|mozzarell|burrata|stracchin|squacquer|crescenza|ricotta|mascarpone|provol|scamorz|fontina|asiago|montasio|emmental|edamer|taleggio|caciott|fior di latte|feta|brie|camembert|philadelphia|grattugiat|biraghi|galbani|galbanino|leerdammer|robiola|certosa|cacciatore|spianata|salumi|sottilett|fett[ei]n[ae] di formaggio|stracciatella di"),
-    ("Latte, yogurt e uova", r"\blatte\b|yogurt|yoghurt|kefir|skyr|actimel|activia|budin|panna|burro|uova|\buovo\b|margarin|dessert|danone|muller|müller|zymil|hipro|bevanda.*(soia|avena|mandorl|riso)"),
+    ("Salumi e formaggi", r"prosciutt|salam|mortadell|speck|bresaol|coppa\b|pancett|guancial|culatell|cotechino|zampone|spalla cotta|affettat|formagg|parmigian|grana|pecorin|gorgonzol|mozzarell|burrata|stracchin|squacquer|crescenza|ricotta|mascarpone|provol|scamorz|fontina|asiago|montasio|emmental|edamer|taleggio|caciott|fior di latte|feta|brie|camembert|philadelphia|frittata|gastronomia|rovagnati|snello|grattugiat|biraghi|galbani|galbanino|leerdammer|robiola|certosa|cacciatore|spianata|salumi|sottilett|fett[ei]n[ae] di formaggio|stracciatella di"),
+    ("Latte, yogurt e uova", r"\blatte\b|yogurt|yoghurt|parmalat|alpro|planted|kefir|skyr|actimel|activia|budin|panna|burro|uova|margarin|dessert|danone|muller|müller|zymil|hipro|bevanda.*(soia|avena|mandorl|riso)"),
     ("Pane e forno", r"\bpane\b|panin|piadin|tortill|focacc|grissin|cracker|crackers|taralli|fette (tostat|integral)|pan bauletto|pancarr|bauletto|wasa|gallette|schiacciat|pinsa|pizza (fresca|margherita|bella)|basi pizza|pasta (sfoglia|brisè|frolla)"),
-    ("Dolci e snack", r"cioccolat|tavolett|praline|caramell|chewing|gomme|patatine|chips|pop ?corn|snack|wafer|tort[ae]|panetton|pandoro|colomba|torron|dolci|pasticc|tiramis|crostat|muffin|ciambell|salatini|arachidi|kinder|ferrero|lindt|milka|loacker|haribo|pringles|san carlo|amica chips"),
-    ("Pasta, riso e dispensa", r"pasta|spaghett|penne|fusill|rigaton|farfall|tagliatell|lasagn|tortellin|ravioli|gnocch|riso\b|risott|farin|zucchero|sale\b|olio|oliva|aceto|passata|polpa|pelati|sugo|ragù|pesto|tonno|legumi|fagiol|ceci|lenticch|piselli|mais|conserv|sottol|sottacet|olive|maionese|ketchup|senape|dado|brodo|spezie|lievito|minestr|zuppa|crema di|purè|cous ?cous|quinoa|orzo perlato|farro|barilla|de cecco|voiello|rummo|garofalo|divella|mutti|cirio|rio mare|nostromo|calv[eè]|knorr|star\b"),
-    ("Non alimentari", r"abbigliam|maglia|calz|pantalon|giacca|scarpe|pigiama|intimo|lenzuol|asciugaman|tappet|cuscin|piumon|pentol|padell|tegam|bicchier|piatti in|posate|lampad|batteri[ae]|attrezz|trapano|avvitator|cacciavite|giardin|fiori|piant|vaso|giocattol|gioco|bicicl|auto\b|garage|elettrodomestic|friggitrice|frullator|aspirapolvere|ferro da stiro|tv\b|cuffie|smartphone|tablet|cartoleria|quaderni|zaino|valigi|decoraz|natal|candel"),
+    ("Dolci e snack", r"cioccolat|tavolett|praline|caramell|chewing|gomme|patatine|chips|pop ?corn|snack|wafer|tort[ae]|panetton|pandoro|colomba|torron|dolci|pasticc|tiramis|crostat|muffin|ciambell|salatini|arachidi|kinder|ferrero|snickers|nestl[eé]|twix|mars\b|lindt|milka|loacker|haribo|pringles|san carlo|amica chips"),
+    ("Pasta, riso e dispensa", r"pasta|pastin|spaghett|penne|fusill|rigaton|farfall|tagliatell|lasagn|tortellin|ravioli|gnocch|riso\b|risott|farin|zucchero|sale\b|olio|oliva|aceto|passata|polpa|pelati|sugo|ragù|pesto|tonno|legumi|fagiol|ceci|lenticch|piselli|mais|conserv|sottol|sottacet|olive|maionese|ketchup|senape|dado|brodo|spezie|lievito|minestr|zuppa|crema di|purè|cous ?cous|quinoa|orzo perlato|farro|barilla|de cecco|voiello|rummo|garofalo|divella|mutti|cirio|rio mare|nostromo|calv[eè]|knorr|star\b"),
+    ("Non alimentari", r"abbigliam|maglia|calz|pantalon|giacca|scarpe|pigiama|intimo|lenzuol|asciugaman|tappet|cuscin|piumon|pentol|padell|tegam|bicchier|piatti in|posate|lampad|batteri[ae]|attrezz|trapano|avvitator|cacciavite|giardin|fiori|piant|vaso|giocattol|gioco|bicicl|auto\b|garage|elettrodomestic|stufa|termozeta|borsa calda|midea|air fryer|friggitrice|frullator|aspirapolvere|ferro da stiro|tv\b|cuffie|smartphone|tablet|cartoleria|quaderni|zaino|valigi|decoraz|natal|candel"),
 ]
 _CAT_RE = [(c, re.compile(r, re.I)) for c, r in CATEGORIE]
 HINT = {  # categorie dei siti -> categorie comuni (quando il nome non basta)
@@ -131,12 +131,12 @@ def categoria(nome, dettaglio="", suggerimento=""):
     h = HINT.get((suggerimento or "").strip().lower())
     if h in FORTI:
         return h
-    testo = f"{nome} {dettaglio}"
-    for c, rx in _CAT_RE:
-        if rx.search(testo):
-            if c == "Non alimentari" and suggerimento and h not in (None, "Non alimentari"):
-                continue
-            return c
+    for testo in (nome, f"{nome} {dettaglio}"):  # prima il solo nome, poi anche la descrizione
+        for c, rx in _CAT_RE:
+            if rx.search(testo):
+                if c == "Non alimentari" and suggerimento and h not in (None, "Non alimentari"):
+                    continue
+                return c
     if suggerimento:  # es. categoria Lidl "Formaggi, latticini e uova"
         for c, rx in _CAT_RE:
             if rx.search(suggerimento):
@@ -284,7 +284,7 @@ RE_PREZZO = re.compile(r"^(?:€\s*)?(\d{1,3})\s?[,.]\s?(\d{2})\s*€?$")
 
 RE_BADGE = re.compile(r"^(SOTTO ?COSTO|SOTTO|COSTO|SOLO|OFFERTA|NOVIT[AÀ]|SCONTO.*|GRATIS|CONVIENE|PREZZO.*|PREZZI.*|"
                       r"BASSI E FISSI|N°.*|.*PEZZI DISPONIBILI.*|A PARTIRE DA|IN PI[UÙ]|OGNI|"
-                      r"SCOPRI.*|DAL .*|FINO AL .*|SOLO PER .*|CARTA .*|€|SOLO TITOLARI.*|TITOLARI.*|ALL.ETTO|AL KG|IL TUO VOLANTINO)$")
+                      r"SCOPRI.*|DAL .*|FINO AL .*|SOLO PER .*|CARTA .*|€|SOLO TITOLARI.*|TITOLARI.*|ALL.ETTO|AL KG|IL TUO VOLANTINO|VIENI SU.*|SEGUICI.*|WHATSAPP.*|SCARICA.*|APP .*)$")
 RE_BADGE_IN = re.compile(r"\s*\b(SOTTO ?COSTO|NOVIT[AÀ]|SOLO TITOLARI( CARTA)?)\b\s*", re.I)
 
 
@@ -327,15 +327,43 @@ def conad_pdf(pdf_bytes, flyer, img_out):
         immagini = [fitz.Rect(i["bbox"]) & page.rect for i in page.get_image_info()
                     if (fitz.Rect(i["bbox"]) & page.rect).get_area() > 0.004 * W * H
                     and (fitz.Rect(i["bbox"]) & page.rect).get_area() < 0.5 * W * H]
+        # riquadri dei prodotti: rettangoli colorati disegnati nel PDF (uno per prodotto)
+        riquadri = []
+        for dr in page.get_drawings():
+            R = dr.get("rect")
+            if R is not None and dr.get("fill") is not None and 0.08 * W < R.width < 0.7 * W \
+                    and 0.08 * H < R.height < 0.75 * H:
+                riquadri.append(fitz.Rect(R))
+        centri = [fitz.Point((q["bbox"].x0 + q["bbox"].x1) / 2, (q["bbox"].y0 + q["bbox"].y1) / 2) for q in prezzi]
+        pezzi = [fitz.Rect(i["bbox"]) & page.rect for i in page.get_image_info()]
+        pezzi = [I for I in pezzi if 0.0008 * W * H < I.get_area() < 0.3 * W * H
+                 and sum(I.contains(c) for c in centri) == 0]
+
+        def costo(I, q):
+            Q = q["bbox"]
+            if min(I.y1, Q.y1 + 0.05 * H) - max(I.y0, Q.y0 - 0.3 * H) <= 0:
+                return 1e9  # nessuna sovrapposizione verticale con la zona del prodotto
+            if I.x1 <= Q.x1 + 2:  # foto a sinistra del prezzo (o sopra): caso normale
+                return max(0.0, Q.x0 - I.x1 - 0.12 * W) + abs((I.y0 + I.y1) / 2 - (Q.y0 + Q.y1) / 2) * 0.2
+            return (I.x0 - Q.x1) + 0.15 * W
+        proprietario = []
+        for I in pezzi:
+            q = min(prezzi, key=lambda q: costo(I, q))
+            if costo(I, q) < 0.2 * W:
+                proprietario.append((I, q))
         for pr in prezzi:
             P = pr["bbox"]
             pc = fitz.Point((P.x0 + P.x1) / 2, (P.y0 + P.y1) / 2)
+            dentro = [R for R in riquadri if R.contains(pc)]
+            tile = min(dentro, key=lambda R: R.get_area()) if dentro else None
             # nome: righe maiuscole sopra al prezzo e vicine
             vicine = []
             for r in nomi:
                 R = r["bbox"]
                 if R.y0 > P.y1 + 4:  # sotto al prezzo: no
                     continue
+                if tile is not None and not tile.contains(fitz.Point((R.x0 + R.x1) / 2, (R.y0 + R.y1) / 2)):
+                    continue  # testo di un altro riquadro
                 dy = P.y0 - R.y1
                 dx = abs((R.x0 + R.x1) / 2 - pc.x)
                 if dy > 0.30 * H or dx > 0.30 * W:
@@ -394,22 +422,24 @@ def conad_pdf(pdf_bytes, flyer, img_out):
             elif vecchio and vecchio > prezzo(pr["t"]) * 3:
                 vecchio = None
             unit = next((r["t"] for r in intorno if re.search(r"\bal (kg|l|lt|litro|pz)\b|/kg|/l\b", r["t"], re.I)), "")
-            # foto: immagine incorporata più vicina, altrimenti ritaglio attorno a nome+prezzo
-            centro = fitz.Point((gruppo[0]["bbox"].x0 + P.x1) / 2, (gruppo[0]["bbox"].y0 + P.y1) / 2)
+            # foto: il riquadro del prodotto; se manca (o contiene solo il prezzo) i pezzi di foto
+            # "di proprietà" di questo prezzo, cioè subito a sinistra/sopra del suo testo
+            T = gruppo[0]["bbox"] | P
+            miei = [I for I, q in proprietario if q is pr]
             clip = None
-            if immagini:
-                best = min(immagini, key=lambda R: abs((R.x0 + R.x1) / 2 - centro.x)
-                           + abs((R.y0 + R.y1) / 2 - centro.y))
-                if abs((best.x0 + best.x1) / 2 - centro.x) < 0.35 * W and \
-                        abs((best.y0 + best.y1) / 2 - centro.y) < 0.35 * H:
-                    clip = best
-            if clip is not None:
-                clip = (clip | gruppo[0]["bbox"] | P) & page.rect
-                if clip.width > 0.6 * W or clip.height > 0.6 * H:
-                    clip = None
+            if tile is not None:
+                coperto = sum((I & tile).get_area() for I in pezzi) / max(tile.get_area(), 1)
+                clip = tile if coperto >= 0.12 else None
+                T = tile if clip is None else T
+            if clip is None and miei:
+                unione = T
+                for I in sorted(miei, key=lambda I: -I.get_area()):
+                    if (unione | I).width < 0.5 * W and (unione | I).height < 0.6 * H:
+                        unione = unione | I
+                clip = (unione & page.rect) if unione != T else None
             if clip is None:
-                clip = fitz.Rect(min(gruppo[0]["bbox"].x0, P.x0) - 20, gruppo[0]["bbox"].y0 - 0.12 * H,
-                                 max(P.x1, gruppo[0]["bbox"].x1) + 20, P.y1 + 10) & page.rect
+                clip = tile or (fitz.Rect(min(gruppo[0]["bbox"].x0, P.x0) - 20, gruppo[0]["bbox"].y0 - 0.12 * H,
+                                          max(P.x1, gruppo[0]["bbox"].x1) + 20, P.y1 + 10) & page.rect)
             img_url = None
             try:
                 zoom = min(3.0, 420 / max(clip.width, 1))

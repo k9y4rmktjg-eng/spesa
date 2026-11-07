@@ -93,6 +93,57 @@ def scorri(page, volte=8):
         page.wait_for_timeout(350)
 
 
+
+# ---------------------------------------------------------------- CATEGORIE comuni ai negozi
+CATEGORIE = [  # (categoria, parole chiave) — l'ordine conta: vince la prima che trova
+    ("Surgelati", r"surgelat|gelat[oi]|ghiacciol|bastoncin|sofficin|findus|pizza.*(congel|surgel)|patatine.*(forno|fritt)|minestrone|frozen"),
+    ("Infanzia", r"omogeneizz|pannolin|mellin|plasmon|neonat|bimb|baby|latte (in polvere|di crescita|1|2|3)\b|pouch"),
+    ("Animali", r"\bcane\b|\bcani\b|gatt[oi]|croccant|crocchett|lettiera|per animali|pet\b|felix|purina|whiskas|friskies|sheba|gourmet"),
+    ("Cura della persona", r"shampoo|balsamo|bagnoschiuma|doccia|sapone|deodorant|dentifric|spazzolin|collutor|rasoi|schiuma da barba|gillette|crema (viso|mani|corpo)|assorbent|salvaslip|cotton|struccant|igiene intima|lacca|tinta|cosmet|fazzolett"),
+    ("Casa e pulizia", r"detersiv|ammorbid|candeggin|sgrassat|pavimenti|lavastoviglie|piatti|bucato|anticalcare|igienizz|carta igienica|carta da cucina|rotoloni|regina\b|asciugatutto|scottex|tovagliol|rotoli|sacchi|pellicola|alluminio|spugn|dixan|dash|finish|svelto|lysoform|chanteclair|ace\b|swiffer|insetticid|deodorante per ambient|pastiglie|capsule (lavatrice|lavastov)"),
+    ("Bevande", r"\bacqua\b|bibit|cola\b|pepsi|aranciata|chinotto|gassos|succo|nettare|spremut|\bt[eè] (fredd|limone|pesca)|estath|birra|vino|prosecco|spumante|pignoletto|\bdoc\b|docg|\bigt\b|rosé|rosato|lambrusco|champagne|liquor|amaro|grappa|whisky|vodka|gin\b|rum\b|aperitiv|spritz|energy|sciroppo|bevanda (di|al|vegetale)|integratore salin|gatorade|powerade"),
+    ("Caffè, tè e colazione", r"caff[eè]|espresso|lavazza|illy\b|kimbo|segafredo|borbone|capsul|cialde|orzo|cappuccin|\bt[eè]\b|tisan|camomill|infuso|cereali|muesli|fiocchi d|cornflakes|biscott|biscuits|fette biscott|merendin|cornett|brioche|croissant|crostatin|plumcake|marmellat|confettur|nutella|crema spalmabile|miele|cacao|nesquik|pan di stelle|macine|abbracci|gocciole|oro saiwa"),
+    ("Frutta e verdura", r"\bmel[ae]\b|\bpere\b|\bpera\b|banan|arance|\barancia\b|mandarin|clementin|limon|kiwi|\buva\b|frutt[ao] fresc|ananas|fragol|pesche|albicocc|cachi|melagran|avocado|insalat|lattug|rucola|spinac|zucchin|melanzan|peperon|pomodor(i|ino) (fresch|ciliegin|datterin|grappolo)|ciliegin|datterin|carot|patat[ae]\b|cipoll|aglio|finocch|sedano|cavol|broccol|verza|radicchi|funghi|champignon|zucca|carciof|legumi fresch|verdur|ortofrutt|marroni|frutta secca|noci|mandorle|nocciole|pistacch|castagn|datteri"),
+    ("Carne e pesce", r"pollo|tacchino|manzo|bovino|vitell|suino|maiale|lonza|braciol|salsicc|hamburger|polpett|macinat|bistecc|fettin|cotolett|arrost|spezzatin|petto di|cosce|sovracosc|ali di|agnell|coniglio|wurstel|würstel|pesce|salmone|tonno fresc|merluzz|nasell|orata|branzin|spigol|gamber|cozze|vongol|calamar|seppi|polp[oi]|filetti di|baccal|sgombr|alici|acciugh|sardin|surimi|pepite|nuggets|cordon"),
+    ("Salumi e formaggi", r"prosciutt|salam|mortadell|speck|bresaol|coppa\b|pancett|guancial|culatell|cotechino|zampone|spalla cotta|affettat|formagg|parmigian|grana|pecorin|gorgonzol|mozzarell|burrata|stracchin|squacquer|crescenza|ricotta|mascarpone|provol|scamorz|fontina|asiago|montasio|emmental|edamer|taleggio|caciott|fior di latte|feta|brie|camembert|philadelphia|grattugiat|biraghi|galbani|galbanino|leerdammer|robiola|certosa|cacciatore|spianata|salumi|sottilett|fett[ei]n[ae] di formaggio|stracciatella di"),
+    ("Latte, yogurt e uova", r"\blatte\b|yogurt|yoghurt|kefir|skyr|actimel|activia|budin|panna|burro|uova|\buovo\b|margarin|dessert|danone|muller|müller|zymil|hipro|bevanda.*(soia|avena|mandorl|riso)"),
+    ("Pane e forno", r"\bpane\b|panin|piadin|tortill|focacc|grissin|cracker|crackers|taralli|fette (tostat|integral)|pan bauletto|pancarr|bauletto|wasa|gallette|schiacciat|pinsa|pizza (fresca|margherita|bella)|basi pizza|pasta (sfoglia|brisè|frolla)"),
+    ("Dolci e snack", r"cioccolat|tavolett|praline|caramell|chewing|gomme|patatine|chips|pop ?corn|snack|wafer|tort[ae]|panetton|pandoro|colomba|torron|dolci|pasticc|tiramis|crostat|muffin|ciambell|salatini|arachidi|kinder|ferrero|lindt|milka|loacker|haribo|pringles|san carlo|amica chips"),
+    ("Pasta, riso e dispensa", r"pasta|spaghett|penne|fusill|rigaton|farfall|tagliatell|lasagn|tortellin|ravioli|gnocch|riso\b|risott|farin|zucchero|sale\b|olio|oliva|aceto|passata|polpa|pelati|sugo|ragù|pesto|tonno|legumi|fagiol|ceci|lenticch|piselli|mais|conserv|sottol|sottacet|olive|maionese|ketchup|senape|dado|brodo|spezie|lievito|minestr|zuppa|crema di|purè|cous ?cous|quinoa|orzo perlato|farro|barilla|de cecco|voiello|rummo|garofalo|divella|mutti|cirio|rio mare|nostromo|calv[eè]|knorr|star\b"),
+    ("Non alimentari", r"abbigliam|maglia|calz|pantalon|giacca|scarpe|pigiama|intimo|lenzuol|asciugaman|tappet|cuscin|piumon|pentol|padell|tegam|bicchier|piatti in|posate|lampad|batteri[ae]|attrezz|trapano|avvitator|cacciavite|giardin|fiori|piant|vaso|giocattol|gioco|bicicl|auto\b|garage|elettrodomestic|friggitrice|frullator|aspirapolvere|ferro da stiro|tv\b|cuffie|smartphone|tablet|cartoleria|quaderni|zaino|valigi|decoraz|natal|candel"),
+]
+_CAT_RE = [(c, re.compile(r, re.I)) for c, r in CATEGORIE]
+HINT = {  # categorie dei siti -> categorie comuni (quando il nome non basta)
+    "cura della persona": "Cura della persona", "igiene della casa": "Casa e pulizia", "bevande": "Bevande",
+    "per i nostri piccoli amici": "Animali", "prodotti infanzia": "Infanzia", "casa": "Non alimentari",
+    "abbigliamento e accessori": "Non alimentari", "tempo libero": "Non alimentari",
+    "multimedia / tecnologia": "Non alimentari", "surgelati": "Surgelati", "ortofrutta": "Frutta e verdura",
+    "macelleria": "Carne e pesce", "pescheria": "Carne e pesce", "gastronomia": "Salumi e formaggi",
+    "salumeria": "Salumi e formaggi", "latticini": "Latte, yogurt e uova", "panetteria": "Pane e forno",
+    "forno": "Pane e forno", "drogheria": "Pasta, riso e dispensa", "dispensa": "Pasta, riso e dispensa",
+    "freschi": "Altri freschi", "freschissimi": "Altri freschi", "non food": "Non alimentari",
+}
+FORTI = {"Cura della persona", "Casa e pulizia", "Animali", "Infanzia", "Non alimentari"}
+
+
+def categoria(nome, dettaglio="", suggerimento=""):
+    """Assegna una categoria comune a tutti i negozi, dal nome del prodotto e dall'indicazione del sito."""
+    h = HINT.get((suggerimento or "").strip().lower())
+    if h in FORTI:
+        return h
+    testo = f"{nome} {dettaglio}"
+    for c, rx in _CAT_RE:
+        if rx.search(testo):
+            if c == "Non alimentari" and suggerimento and h not in (None, "Non alimentari"):
+                continue
+            return c
+    if suggerimento:  # es. categoria Lidl "Formaggi, latticini e uova"
+        for c, rx in _CAT_RE:
+            if rx.search(suggerimento):
+                return c
+    return h or "Altro"
+
+
 # ---------------------------------------------------------------- LIDL
 def lidl(ctx, n):
     page = ctx.new_page()
@@ -149,7 +200,9 @@ def lidl(ctx, n):
                 "prezzo": p,
                 "prezzo_prima": prezzo(cp.get("oldPrice") or disc.get("deletedPrice")),
                 "sconto": disc.get("discountText") or "",
-                "categoria": "Alimentari" if d.get("category") == "Food" else "Casa e altro",
+                "categoria": categoria(d.get("title") or nome, (cp.get("packaging") or {}).get("text") or "",
+                                       ((d.get("keyfacts") or {}).get("wonCategoryPrimary") or "").split("/")[-2:][0]
+                                       if d.get("category") == "Food" else "non food"),
                 "nota": campagna + (" · Lidl Plus" if "plus" in campagna.lower() else ""),
                 "immagine": img,
                 "link": link,
@@ -214,7 +267,7 @@ def coop(ctx, n):
                 "prezzo": p,
                 "prezzo_prima": vecchio,
                 "sconto": sconto.strip(),
-                "categoria": cats.get(pr.get("categoryCode"), "Altro"),
+                "categoria": categoria(nome, pr.get("desc_promo2") or "", cats.get(pr.get("categoryCode"), "")),
                 "nota": titolo + (" · " + pr["desc_promo3"] if pr.get("desc_promo3") else ""),
                 "immagine": pr.get("img"),
                 "link": lf.get("url"),
@@ -231,8 +284,8 @@ RE_PREZZO = re.compile(r"^(?:€\s*)?(\d{1,3})\s?[,.]\s?(\d{2})\s*€?$")
 
 RE_BADGE = re.compile(r"^(SOTTO ?COSTO|SOTTO|COSTO|SOLO|OFFERTA|NOVIT[AÀ]|SCONTO.*|GRATIS|CONVIENE|PREZZO.*|PREZZI.*|"
                       r"BASSI E FISSI|N°.*|.*PEZZI DISPONIBILI.*|A PARTIRE DA|IN PI[UÙ]|OGNI|"
-                      r"SCOPRI.*|DAL .*|FINO AL .*|SOLO PER .*|CARTA .*|€)$")
-RE_BADGE_IN = re.compile(r"\s*\b(SOTTO ?COSTO|NOVIT[AÀ])\b\s*", re.I)
+                      r"SCOPRI.*|DAL .*|FINO AL .*|SOLO PER .*|CARTA .*|€|SOLO TITOLARI.*|TITOLARI.*|ALL.ETTO|AL KG|IL TUO VOLANTINO)$")
+RE_BADGE_IN = re.compile(r"\s*\b(SOTTO ?COSTO|NOVIT[AÀ]|SOLO TITOLARI( CARTA)?)\b\s*", re.I)
 
 
 def _badge(t):
@@ -298,8 +351,10 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                             key=lambda r: r["bbox"].y0)
             nome = " ".join(r["t"] for r in gruppo)
             nome = RE_BADGE_IN.sub(" ", nome)
+            mrep = re.match(r"^REPARTO (\S+)\s+", nome, flags=re.I)
+            reparto = mrep.group(1) if mrep else ""
             nome = re.sub(r"^REPARTO \S+\s+", "", nome, flags=re.I)
-            if re.search(r"VOLANTINO|PAGIN", nome, re.I):
+            if re.search(r"VOLANTINO|PAGIN", nome, re.I) or re.fullmatch(r"(?i)all.etto|al kg|solo|titolari", nome):
                 continue
             nome = re.sub(r"\s+", " ", nome).strip(" ,.-")
             if len(nome) < 4:
@@ -370,7 +425,7 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                 "prezzo": p,
                 "prezzo_prima": vecchio,
                 "sconto": sconto,
-                "categoria": "Volantino",
+                "categoria": categoria(nome, dett, reparto),
                 "nota": bel_nome(flyer.get("title") or "") + f" · pag. {pno + 1}",
                 "immagine": img_url,
                 "link": flyer.get("pdfUrl"),

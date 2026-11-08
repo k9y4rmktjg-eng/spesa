@@ -146,6 +146,9 @@ main{padding:6px 16px 20px}
 .tx{flex:1;min-width:0}
 .t1{font-weight:600;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .t2{color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t2 .scade{color:var(--warn);font-weight:700}
+.rep{padding:8px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);border-top:1px solid var(--line)}
+.items .rep:first-child{border-top:0}
 .qty{display:flex;align-items:center;background:var(--bg);border-radius:99px;flex:none}
 .qty button{width:30px;height:30px;display:grid;place-items:center;font-weight:700;color:var(--ink2)}
 .qty span{min-width:18px;text-align:center;font-weight:700;font-size:14px}
@@ -301,7 +304,7 @@ const NEG = {
 };
 const euro = v => v==null||isNaN(v) ? "" : v.toLocaleString("it-IT",{style:"currency",currency:"EUR"});
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const oggi = new Date().toISOString().slice(0,10);
+const oggi = new Date().toLocaleDateString("sv-SE"); // data locale AAAA-MM-GG (non UTC)
 const LS = {get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch{return d}},
             set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch{}}};
 const dataIt = s => { if(!s) return ""; const d=new Date(s+"T12:00:00"); return d.toLocaleDateString("it-IT",{day:"numeric",month:"short"}); };
@@ -331,6 +334,7 @@ async function caricaOfferte(){
     DATI = await r.json(); LS.set("cacheOfferte",DATI);
   }catch{ DATI = LS.get("cacheOfferte",DATI); }
   DATI.offerte = (DATI.offerte||[]).filter(o=>!o.al || o.al>=oggi);
+  for(const k in cacheReparti) delete cacheReparti[k];
   for(const o of DATI.offerte){
     o._pct = o.prezzo_prima && o.prezzo_prima>o.prezzo ? Math.round((1-o.prezzo/o.prezzo_prima)*100)
       : (parseInt((o.sconto||"").replace(/[^\d]/g,""))||0);
@@ -478,7 +482,7 @@ function aggiungiOfferta(o){
   const ex = LISTA.find(v=>v.offertaId===o.id && !v.fatto);
   if(ex) store.upd(ex.id,{qta:(ex.qta||1)+1});
   else store.add({id:nuovoId(),nome:o.nome,negozio:o.negozio,prezzo:o.prezzo,qta:1,fatto:false,
-    prima:o.prezzo_prima&&o.prezzo_prima>o.prezzo?o.prezzo_prima:null,immagine:o.immagine||"",offertaId:o.id,dettaglio:[o.marca,o.dettaglio].filter(Boolean).join(" · "),al:o.al||"",chi:nomeUtente(),creato:Date.now()});
+    prima:o.prezzo_prima&&o.prezzo_prima>o.prezzo?o.prezzo_prima:null,categoria:o.categoria||"",immagine:o.immagine||"",offertaId:o.id,dettaglio:[o.marca,o.dettaglio].filter(Boolean).join(" · "),al:o.al||"",chi:nomeUtente(),creato:Date.now()});
   toast(`Aggiunto: ${o.nome}`); if(navigator.vibrate) navigator.vibrate(10);
 }
 function aggiungiManuale(){
@@ -501,21 +505,56 @@ function disegnaLista(){
   $("#contaLista").textContent = `${aperte} da prendere · ${LISTA.length-aperte} presi`;
   const gruppi = {}; LISTA.forEach(v=>{(gruppi[v.negozio||"altro"] ??= []).push(v)});
   $("#lista").innerHTML = Object.keys(NEG).filter(k=>gruppi[k]).map(k=>{
-    const vv = gruppi[k].sort((a,b)=>(a.fatto-b.fatto)||(a.creato-b.creato));
+    const vv = gruppi[k].sort((a,b)=>(a.fatto-b.fatto)||(ordReparto(a)-ordReparto(b))||(a.creato-b.creato));
+    let ultimo = null;
     const sub = vv.filter(v=>!v.fatto).reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0);
     const rs = vv.filter(v=>!v.fatto).reduce((s,v)=>s+risparmio(v),0);
-    return `<div class="grp"><div class="grph"><span>${logo(k)}${NEG[k].nome}</span><span>${rs>=0.01?`<span class="risp">risparmi ${euro(rs)}</span> · `:""}${sub?euro(sub):""}</span></div><div class="items">${vv.map(v=>`
+    return `<div class="grp"><div class="grph"><span>${logo(k)}${NEG[k].nome}</span><span>${rs>=0.01?`<span class="risp">risparmi ${euro(rs)}</span> · `:""}${sub?euro(sub):""}</span></div><div class="items">${vv.map(v=>{
+      const r = v.fatto ? "Presi" : repartoDi(v), titolo = r!==ultimo ? `<div class="rep">${esc(r)}</div>` : ""; ultimo = r;
+      return titolo+`
       <div class="it ${v.fatto?"done":""}" data-it="${v.id}">
         <button class="chk" data-chk="${v.id}" aria-label="Preso">${v.fatto?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>`:""}</button>
         <div class="thumb">${v.immagine?`<img src="${esc(v.immagine)}" referrerpolicy="no-referrer" loading="lazy" alt="">`:emojiPer(v.nome)}</div>
-        <div class="tx" data-chk="${v.id}"><div class="t1">${esc(v.nome)}</div><div class="t2">${esc([v.dettaglio, v.al&&v.al<oggi?"offerta scaduta":"", v.chi?"da "+v.chi:""].filter(Boolean).join(" · "))}</div></div>
+        <div class="tx" data-chk="${v.id}"><div class="t1">${esc(v.nome)}</div><div class="t2">${[avvisoScadenza(v), esc(v.dettaglio||""), v.chi?esc("da "+v.chi):""].filter(Boolean).join(" · ")}</div></div>
         <div class="qty"><button data-meno="${v.id}" aria-label="Meno">−</button><span>${v.qta||1}</span><button data-piu="${v.id}" aria-label="Più">+</button></div>
         <div class="ip">${v.prezzo!=null?euro(v.prezzo*(v.qta||1)):""}${prezzoPieno(v)?`<span class="prima">${euro(prezzoPieno(v)*(v.qta||1))}</span>`:""}</div>
-      </div>`).join("")}</div></div>`;
+      </div>`;}).join("")}</div></div>`;
   }).join("");
 }
 
 function aggiornaTutto(){ disegnaLista(); if($("#v-off").classList.contains("on")) disegnaOfferte(); }
+
+/* ---------- reparti e scadenze ---------- */
+// ordine dei reparti come si incontrano di solito nel supermercato
+const REPARTI = ["Frutta e verdura","Pane e forno","Carne e pesce","Salumi e formaggi","Latte, yogurt e uova","Altri freschi",
+  "Pasta, riso e dispensa","Caffè, tè e colazione","Dolci e snack","Bevande","Surgelati","Casa e pulizia","Cura della persona",
+  "Infanzia","Animali","Non alimentari","Altro"];
+const cacheReparti = {};
+function repartoDi(v){
+  if(v.categoria && REPARTI.includes(v.categoria)) return v.categoria;
+  if(v.offertaId){ const o=(DATI.offerte||[]).find(x=>x.id===v.offertaId); if(o&&o.categoria) return REPARTI.includes(o.categoria)?o.categoria:"Altro"; }
+  // prodotto scritto a mano: la categoria più frequente tra le offerte con lo stesso nome (es. "latte")
+  const chiave = norm(v.nome);
+  if(!(chiave in cacheReparti)){
+    const Q = paroleRicerca(v.nome), cnt = {};
+    if(Q.length) for(const o of DATI.offerte||[]) if(o.categoria && punteggio(o,Q)===2) cnt[o.categoria]=(cnt[o.categoria]||0)+1;
+    const best = Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+    const r = best && REPARTI.includes(best[0]) ? best[0] : "Altro";
+    if(!(DATI.offerte||[]).length) return r;   // offerte non ancora caricate: non memorizzo
+    cacheReparti[chiave] = r;
+  }
+  return cacheReparti[chiave];
+}
+const ordReparto = v => REPARTI.indexOf(repartoDi(v));
+// "scade oggi / domani / giovedì" se l'offerta finisce entro 2 giorni, "offerta scaduta" se è finita
+function avvisoScadenza(v){
+  if(!v.al || v.fatto) return "";
+  if(v.al < oggi) return `<span class="scade">offerta scaduta</span>`;
+  const giorni = Math.round((new Date(v.al+"T12:00") - new Date(oggi+"T12:00"))/864e5);
+  if(giorni>2) return "";
+  const quando = giorni===0 ? "oggi" : giorni===1 ? "domani" : new Date(v.al+"T12:00").toLocaleDateString("it-IT",{weekday:"long"});
+  return `<span class="scade">⏰ scade ${quando}</span>`;
+}
 
 /* ---------- risparmio ---------- */
 // prezzo pieno di una voce: salvato quando è stata aggiunta, o ripreso dall'offerta se ancora presente

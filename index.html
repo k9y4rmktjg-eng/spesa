@@ -97,6 +97,22 @@ main{padding:6px 16px 20px}
 .prezzi{display:flex;align-items:baseline;gap:6px;margin-top:auto;padding-top:6px}
 .prezzo{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:22px;letter-spacing:-.01em}
 .prima{color:var(--ink3);text-decoration:line-through;font-size:13px}
+.stella{position:absolute;bottom:8px;left:8px;width:26px;height:26px;border-radius:50%;background:#FFE14D;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.prefbox{grid-column:1/-1;background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);padding:12px 0 12px 12px;margin-bottom:4px}
+.prefbox h4{margin:0 12px 10px 0;font-size:15px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.prefbox h4 button{border:0;background:transparent;color:var(--ink2);font-size:13px;font-weight:600;padding:0}
+.prefrow{display:flex;gap:10px;overflow-x:auto;padding:2px 12px 4px 0;scrollbar-width:none}
+.prefrow::-webkit-scrollbar{display:none}
+.prefrow .card{flex:0 0 150px;box-shadow:none;border:1px solid var(--line)}
+.prefbox .vuoto{color:var(--ink3);font-size:14px;padding-right:12px}
+.prefq{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:14px}
+.prefq button{flex:none;border:0;border-radius:99px;padding:7px 12px;font-weight:700;font-size:13px;background:#FFE14D;color:#1E1D19}
+.prefq button.togli{background:var(--line);color:var(--ink)}
+.risp{color:#2FA36B;font-weight:700;font-size:14px}
+.ip .prima{display:block;font-weight:400;font-size:12px}
+.preflist{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.preflist .chip{cursor:default}
+.preflist .chip button{border:0;background:transparent;color:var(--ink3);font-size:13px;padding:0 0 0 2px}
 .add{position:absolute;right:8px;bottom:8px;width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;box-shadow:0 3px 10px rgba(31,107,74,.35);transition:transform .15s}
 .add:active{transform:scale(.88)}
 .add.in{background:var(--ink);color:var(--bg);font-weight:800;font-size:15px}
@@ -222,6 +238,7 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
       <div class="chips small" id="chipDove" style="padding-bottom:0"></div>
     </div>
     <div class="totale"><span class="sub" id="contaLista"></span><span class="serif" id="totLista"></span></div>
+    <div class="totale" id="rispBox" style="margin-top:-4px" hidden><span class="sub">Risparmio sul prezzo pieno</span><span class="risp" id="rispLista"></span></div>
     <div id="lista"></div>
     <div class="actions">
       <button class="btn ghost sm" id="btnShare">📤 Invia la lista</button>
@@ -237,6 +254,15 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
       <div class="field"><label for="impNome">Il tuo nome (si vede accanto ai prodotti che aggiungi)</label><input id="impNome" placeholder="Es. Alessandro" autocomplete="given-name"></div>
       <div class="field"><label for="impPin">Codice famiglia (uguale su tutti i telefoni di casa)</label><input id="impPin" placeholder="Es. caruso-spesa-2026" autocapitalize="none" autocomplete="off"></div>
       <button class="btn" id="btnSalva">Salva e collega</button>
+    </div>
+    <div class="sec">
+      <h3>⭐ Preferiti</h3>
+      <p class="sub">I prodotti che comprate sempre. Quando sono in offerta li trovi in cima alla pagina Offerte. Sono condivisi con la famiglia.</p>
+      <div class="preflist" id="prefList"></div>
+      <div class="addrow">
+        <input id="prefNuovo" placeholder="Es. zymil, caffè lavazza, dixan" enterkeyhint="done" autocapitalize="off">
+        <button class="btn" id="prefAdd" aria-label="Aggiungi preferito">+</button>
+      </div>
     </div>
     <div class="sec">
       <h3>Negozi</h3>
@@ -311,7 +337,7 @@ async function caricaOfferte(){
     o._n = norm(o.nome+" "+(o.marca||""));      // nome e marca: dove si cerca davvero
     o._d = norm(o.dettaglio||"");                // descrizione: solo come risultati secondari
   }
-  disegnaChipNegozi(); disegnaOfferte(); disegnaAvvisi(); disegnaImpNegozi();
+  segnaPreferiti(); disegnaChipNegozi(); disegnaOfferte(); disegnaAvvisi(); disegnaImpNegozi(); aggiornaPreferiti(); disegnaLista();
   const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
   $("#sottotitolo").textContent = (CFG.zona||"Nonantola") + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
 }
@@ -376,7 +402,7 @@ function cardHTML(o){
     : `<span class="emoji">${emojiPer(o.nome)}</span>`;
   const sc = o.sconto || (o._pct ? "-"+o._pct+"%" : "");
   return `<article class="card" data-id="${esc(o.id)}">
-    <div class="ph">${img}<span class="badge" style="background:${n.colore}">${n.nome}</span>${sc?`<span class="sconto">${esc(sc)}</span>`:""}</div>
+    <div class="ph">${img}<span class="badge" style="background:${n.colore}">${n.nome}</span>${sc?`<span class="sconto">${esc(sc)}</span>`:""}${o._pref?`<span class="stella" title="Preferito">⭐</span>`:""}</div>
     <div class="info"><div class="nome">${esc(o.nome)}</div>
       <div class="det">${esc([o.marca,o.dettaglio].filter(Boolean).join(" · ")||o.nota||"")}</div>
       <div class="prezzi"><span class="prezzo">${euro(o.prezzo)}</span>${o.prezzo_prima?`<span class="prima">${euro(o.prezzo_prima)}</span>`:""}</div>
@@ -395,13 +421,13 @@ function disegnaOfferte(){
   }
   const altri = !filtro.anchedescr && r.descr.length && l.length<=filtro.limite
     ? `<button class="alsodesc" id="anchedescr">Mostra anche ${r.descr.length} risultat${r.descr.length===1?"o simile":"i simili"} (parole che iniziano con «${esc(filtro.q.trim())}» o citate nella descrizione)</button>` : "";
-  if(!l.length && !altri){
+  if(!l.length && !altri && filtro.q.trim()){
     const filtri = filtro.neg!=="tutti" || filtro.cat!=="tutte";
-    $("#grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🔎</div>Nessuna offerta per «${esc(filtro.q.trim())}»${filtri?" con i filtri scelti":""}.<br>
+    $("#grid").innerHTML = bottoneSalvaRicerca() + `<div class="empty" style="grid-column:1/-1"><div class="big">🔎</div>Nessuna offerta per «${esc(filtro.q.trim())}»${filtri?" con i filtri scelti":""}.<br>
       ${filtri?`<button class="alsodesc" id="tuttiFiltri" style="margin-top:12px">Cerca in tutti i negozi e categorie</button><br>`:""}Puoi aggiungerlo a mano nella Lista.</div>`;
     $("#more").hidden=true; return;
   }
-  $("#grid").innerHTML = l.slice(0,filtro.limite).map(cardHTML).join("") + altri;
+  $("#grid").innerHTML = boxPreferiti() + bottoneSalvaRicerca() + l.slice(0,filtro.limite).map(cardHTML).join("") + altri;
   $("#more").hidden = l.length<=filtro.limite;
 }
 
@@ -423,9 +449,14 @@ function apriDettaglio(id){
     <div class="meta">${esc(o.unitario||"")}</div>
     <div class="meta">${o.dal||o.al?`📅 ${o.dal?"dal "+dataIt(o.dal)+" ":""}${o.al?"al "+dataIt(o.al):""}`:""}</div>
     <div class="meta">${esc(o.nota||"")}</div>
-    <div class="row"><button class="btn" id="shAdd">Aggiungi alla lista</button>${o.link?`<a class="btn ghost" style="display:grid;place-items:center;text-decoration:none;flex:0 0 auto" href="${esc(o.link)}" target="_blank" rel="noopener">Sito</a>`:""}</div>`;
+    <div class="row"><button class="btn" id="shAdd">Aggiungi alla lista</button><button class="btn ghost" id="shPref" style="flex:0 0 auto">${o._pref?"⭐":"☆"}</button>${o.link?`<a class="btn ghost" style="display:grid;place-items:center;text-decoration:none;flex:0 0 auto" href="${esc(o.link)}" target="_blank" rel="noopener">Sito</a>`:""}</div>`;
   $("#shX").onclick = chiudiSheet;
   $("#shAdd").onclick = ()=>{ aggiungiOfferta(o); chiudiSheet(); };
+  $("#shPref").onclick = ()=>{
+    if(o._pref){ const t=PREF.filter(p=>prefCorrisponde(p,o)); if(confirm(`Togliere dai preferiti «${t.map(p=>p.parole).join("», «")}»?`)) prefStore.del(t.map(p=>p.id)); chiudiSheet(); return; }
+    const parole = prompt("Ti mostro questo prodotto ogni volta che è in offerta.\nParole da cercare (puoi modificarle):", paroleAuto(o));
+    if(parole && parole.trim()){ aggiungiPreferito(parole); chiudiSheet(); }
+  };
   $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on");
 }
 function chiudiSheet(){ $("#sheetBg").classList.remove("on"); $("#sheet").classList.remove("on"); }
@@ -447,7 +478,7 @@ function aggiungiOfferta(o){
   const ex = LISTA.find(v=>v.offertaId===o.id && !v.fatto);
   if(ex) store.upd(ex.id,{qta:(ex.qta||1)+1});
   else store.add({id:nuovoId(),nome:o.nome,negozio:o.negozio,prezzo:o.prezzo,qta:1,fatto:false,
-    immagine:o.immagine||"",offertaId:o.id,dettaglio:[o.marca,o.dettaglio].filter(Boolean).join(" · "),al:o.al||"",chi:nomeUtente(),creato:Date.now()});
+    prima:o.prezzo_prima&&o.prezzo_prima>o.prezzo?o.prezzo_prima:null,immagine:o.immagine||"",offertaId:o.id,dettaglio:[o.marca,o.dettaglio].filter(Boolean).join(" · "),al:o.al||"",chi:nomeUtente(),creato:Date.now()});
   toast(`Aggiunto: ${o.nome}`); if(navigator.vibrate) navigator.vibrate(10);
 }
 function aggiungiManuale(){
@@ -465,33 +496,101 @@ function disegnaLista(){
     $("#totLista").textContent=""; $("#contaLista").textContent=""; return; }
   const tot = LISTA.filter(v=>!v.fatto).reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0);
   $("#totLista").textContent = euro(tot);
+  const risp = LISTA.filter(v=>!v.fatto).reduce((s,v)=>s+risparmio(v),0);
+  $("#rispBox").hidden = risp<0.01; $("#rispLista").textContent = euro(risp);
   $("#contaLista").textContent = `${aperte} da prendere · ${LISTA.length-aperte} presi`;
   const gruppi = {}; LISTA.forEach(v=>{(gruppi[v.negozio||"altro"] ??= []).push(v)});
   $("#lista").innerHTML = Object.keys(NEG).filter(k=>gruppi[k]).map(k=>{
     const vv = gruppi[k].sort((a,b)=>(a.fatto-b.fatto)||(a.creato-b.creato));
     const sub = vv.filter(v=>!v.fatto).reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0);
-    return `<div class="grp"><div class="grph"><span>${logo(k)}${NEG[k].nome}</span><span>${sub?euro(sub):""}</span></div><div class="items">${vv.map(v=>`
+    const rs = vv.filter(v=>!v.fatto).reduce((s,v)=>s+risparmio(v),0);
+    return `<div class="grp"><div class="grph"><span>${logo(k)}${NEG[k].nome}</span><span>${rs>=0.01?`<span class="risp">risparmi ${euro(rs)}</span> · `:""}${sub?euro(sub):""}</span></div><div class="items">${vv.map(v=>`
       <div class="it ${v.fatto?"done":""}" data-it="${v.id}">
         <button class="chk" data-chk="${v.id}" aria-label="Preso">${v.fatto?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>`:""}</button>
         <div class="thumb">${v.immagine?`<img src="${esc(v.immagine)}" referrerpolicy="no-referrer" loading="lazy" alt="">`:emojiPer(v.nome)}</div>
         <div class="tx" data-chk="${v.id}"><div class="t1">${esc(v.nome)}</div><div class="t2">${esc([v.dettaglio, v.al&&v.al<oggi?"offerta scaduta":"", v.chi?"da "+v.chi:""].filter(Boolean).join(" · "))}</div></div>
         <div class="qty"><button data-meno="${v.id}" aria-label="Meno">−</button><span>${v.qta||1}</span><button data-piu="${v.id}" aria-label="Più">+</button></div>
-        <div class="ip">${v.prezzo!=null?euro(v.prezzo*(v.qta||1)):""}</div>
+        <div class="ip">${v.prezzo!=null?euro(v.prezzo*(v.qta||1)):""}${prezzoPieno(v)?`<span class="prima">${euro(prezzoPieno(v)*(v.qta||1))}</span>`:""}</div>
       </div>`).join("")}</div></div>`;
   }).join("");
 }
 
 function aggiornaTutto(){ disegnaLista(); if($("#v-off").classList.contains("on")) disegnaOfferte(); }
 
+/* ---------- risparmio ---------- */
+// prezzo pieno di una voce: salvato quando è stata aggiunta, o ripreso dall'offerta se ancora presente
+function prezzoPieno(v){
+  if(v.prezzo==null) return null;
+  let p = v.prima;
+  if(p==null && v.offertaId){ const o=(DATI.offerte||[]).find(x=>x.id===v.offertaId); p=o&&o.prezzo_prima; }
+  return p && p>v.prezzo ? p : null;
+}
+const risparmio = v => { const p=prezzoPieno(v); return p ? (p-v.prezzo)*(v.qta||1) : 0; };
+
+/* ---------- preferiti ---------- */
+let PREF = [];
+const prefStore = {
+  async add(p){ if(sync.mode==="cloud"&&sync.prefCol) return sync.fs.setDoc(sync.fs.doc(sync.prefCol,p.id),p); PREF.push(p); salvaPrefLocali(); },
+  async del(ids){ if(sync.mode==="cloud"&&sync.prefCol){ const b=sync.fs.writeBatch(sync.db); ids.forEach(id=>b.delete(sync.fs.doc(sync.prefCol,id))); return b.commit(); }
+    PREF = PREF.filter(p=>!ids.includes(p.id)); salvaPrefLocali(); }
+};
+function salvaPrefLocali(){ LS.set("preferitiLocali",PREF); aggiornaPreferiti(); }
+function aggiungiPreferito(parole){
+  parole = parole.trim().replace(/\s+/g," ").slice(0,80);
+  if(!parole) return;
+  if(PREF.some(p=>norm(p.parole)===norm(parole))){ toast("È già nei preferiti"); return; }
+  prefStore.add({id:nuovoId(),parole,chi:nomeUtente(),creato:Date.now()});
+  toast(`⭐ Aggiunto ai preferiti: ${parole}`); if(navigator.vibrate) navigator.vibrate(10);
+}
+const prefCorrisponde = (p,o) => punteggio(o, paroleRicerca(p.parole)) >= 1;
+// segna le offerte che corrispondono a un preferito
+function segnaPreferiti(){
+  const Qs = PREF.map(p=>paroleRicerca(p.parole));
+  for(const o of DATI.offerte||[]) o._pref = Qs.some(Q=>Q.length && punteggio(o,Q)>=1);
+}
+function aggiornaPreferiti(){
+  segnaPreferiti();
+  const cnt = p => (DATI.offerte||[]).filter(o=>prefCorrisponde(p,o)).length;
+  $("#prefList").innerHTML = PREF.length ? PREF.slice().sort((a,b)=>a.parole.localeCompare(b.parole,"it")).map(p=>{
+    const n=cnt(p); return `<span class="chip">⭐ ${esc(p.parole)}<span class="n">${n?n+" in offerta":"–"}</span><button data-pdel="${p.id}" aria-label="Togli">✕</button></span>`;
+  }).join("") : `<span class="sub">Nessun preferito. Aggiungili qui, con la ☆ nel dettaglio di un prodotto o dalla ricerca.</span>`;
+  if($("#v-off").classList.contains("on")) disegnaOfferte();
+}
+// parole proposte per un prodotto: le prime due parole importanti del nome + la marca
+function paroleAuto(o){
+  const vuote = new Set("di da del della dei delle al alla allo ai alle con in per e o il lo la i gli le un una a x g kg ml l cl pz conf".split(" "));
+  const negozi = new Set(["coop","conad","lidl"]);
+  const parole = (o.nome||"").toLowerCase().replace(/[^\p{L}\p{N}' ]+/gu," ").split(/\s+/).filter(w=>w && !vuote.has(w) && !/\d/.test(w) && !w.includes("'"));
+  const marca = (o.marca||"").toLowerCase().trim();
+  const scelte = parole.filter(w=>w!==marca).slice(0,2);
+  if(marca && !negozi.has(marca)) scelte.push(marca);
+  return scelte.join(" ");
+}
+// riquadro "I tuoi preferiti in offerta" in cima alle offerte (solo senza ricerca e filtri)
+function boxPreferiti(){
+  if(!PREF.length || filtro.q.trim() || filtro.neg!=="tutti" || filtro.cat!=="tutte") return "";
+  const l = DATI.offerte.filter(o=>o._pref).sort(ORDINI.sconto);
+  return `<div class="prefbox"><h4><span>⭐ I tuoi preferiti in offerta${l.length?" · "+l.length:""}</span><button onclick="vai('imp')">Modifica</button></h4>
+    ${l.length?`<div class="prefrow">${l.map(cardHTML).join("")}</div>`:`<div class="vuoto">Questa settimana nessun preferito è in offerta.</div>`}</div>`;
+}
+// durante una ricerca: salvarla tra i preferiti
+function bottoneSalvaRicerca(){
+  const q = filtro.q.trim(); if(q.length<3) return "";
+  const p = PREF.find(p=>norm(p.parole)===norm(q));
+  return p ? `<div class="prefq"><span>⭐ «${esc(q)}» è nei preferiti</span><button class="togli" data-pdel="${p.id}">Togli</button></div>`
+           : `<div class="prefq"><span>Lo comprate spesso? Ti avviso quando è in offerta.</span><button data-psave="1">☆ Preferito</button></div>`;
+}
+
 /* ---------- Firebase ---------- */
 async function sha256(t){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
-let unsub = null;
+let unsub = null, unsubPref = null;
 async function collega(){
   const pin = (LS.get("pin","")||"").trim().toLowerCase();
   const fb = CFG.firebase||{};
   if(unsub){ unsub(); unsub=null; }
+  if(unsubPref){ unsubPref(); unsubPref=null; }
   if(!fb.apiKey || !pin){
-    sync = {mode:"local"}; LISTA = LS.get("listaLocale",[]); statoSync(); aggiornaTutto(); return;
+    sync = {mode:"local"}; LISTA = LS.get("listaLocale",[]); PREF = LS.get("preferitiLocali",[]); statoSync(); aggiornaTutto(); aggiornaPreferiti(); return;
   }
   try{
     statoSync("Collegamento…");
@@ -502,7 +601,8 @@ async function collega(){
     let db; try{ db = fs.initializeFirestore(a,{localCache:fs.persistentLocalCache({tabManager:fs.persistentMultipleTabManager()})}); }catch{ db = fs.getFirestore(a); }
     const idLista = await sha256("spesa-famiglia:"+pin);
     const col = fs.collection(db,"liste",idLista,"voci");
-    sync = {mode:"cloud",ok:false,fs,db,col};
+    const prefCol = fs.collection(db,"liste",idLista,"preferiti");
+    sync = {mode:"cloud",ok:false,fs,db,col,prefCol};
     // porta nella lista di famiglia quello che era già sul telefono
     const locali = LS.get("listaLocale",[]);
     if(locali.length){ const b=fs.writeBatch(db); locali.forEach(v=>b.set(fs.doc(col,v.id),v)); await b.commit().catch(()=>{}); LS.set("listaLocale",[]); }
@@ -510,7 +610,14 @@ async function collega(){
       LISTA = snap.docs.map(d=>({id:d.id,...d.data()}));
       sync.ok = !snap.metadata.fromCache; statoSync(); aggiornaTutto();
     },err=>{ console.error(err); sync.ok=false; statoSync("Errore: "+(err.code||"rete")); });
-  }catch(e){ console.error(e); sync={mode:"local"}; LISTA=LS.get("listaLocale",[]); statoSync("Non collegato"); aggiornaTutto(); }
+    // preferiti di famiglia (se le regole del database non li permettono ancora, restano sul telefono)
+    const prefLocali = LS.get("preferitiLocali",[]);
+    unsubPref = fs.onSnapshot(prefCol, snap=>{
+      PREF = snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(prefLocali.length){ const b=fs.writeBatch(db); prefLocali.splice(0).forEach(p=>b.set(fs.doc(prefCol,p.id),p)); b.commit().then(()=>LS.set("preferitiLocali",[])).catch(()=>{}); }
+      aggiornaPreferiti();
+    }, err=>{ console.error(err); sync.prefCol=null; PREF=LS.get("preferitiLocali",[]); aggiornaPreferiti(); });
+  }catch(e){ console.error(e); sync={mode:"local"}; LISTA=LS.get("listaLocale",[]); PREF=LS.get("preferitiLocali",[]); statoSync("Non collegato"); aggiornaTutto(); aggiornaPreferiti(); }
 }
 function statoSync(msg){
   const fb = (CFG.firebase||{}).apiKey;
@@ -564,6 +671,8 @@ $("#fCerca").onsubmit = e=>{ e.preventDefault(); clearTimeout(tq); cerca($("#q")
 $("#ordina").onchange = e=>{ filtro.ord=e.target.value; disegnaOfferte(); };
 $("#more").onclick = ()=>{ filtro.limite+=40; disegnaOfferte(); };
 $("#grid").onclick = e=>{
+  if(e.target.closest("[data-psave]")){ aggiungiPreferito(filtro.q); return; }
+  const pd=e.target.closest("[data-pdel]"); if(pd){ prefStore.del([pd.dataset.pdel]); return; }
   if(e.target.closest("#anchedescr")){ filtro.anchedescr=true; disegnaOfferte(); return; }
   if(e.target.closest("#tuttiFiltri")){ filtro.neg="tutti"; filtro.cat="tutte"; disegnaChipNegozi(); disegnaOfferte(); return; }
   const a=e.target.closest("[data-add]"); if(a){ const o=DATI.offerte.find(x=>x.id===a.dataset.add); if(o){ aggiungiOfferta(o); } return; }
@@ -571,6 +680,9 @@ $("#grid").onclick = e=>{
 };
 $("#chipDove").onclick = e=>{ const b=e.target.closest("[data-dove]"); if(!b) return; DOVE=b.dataset.dove; LS.set("dove",DOVE); disegnaLista(); };
 $("#btnAdd").onclick = aggiungiManuale;
+$("#prefAdd").onclick = ()=>{ aggiungiPreferito($("#prefNuovo").value); $("#prefNuovo").value=""; };
+$("#prefNuovo").onkeydown = e=>{ if(e.key==="Enter"){ aggiungiPreferito(e.target.value); e.target.value=""; e.target.blur(); } };
+$("#prefList").onclick = e=>{ const b=e.target.closest("[data-pdel]"); if(b) prefStore.del([b.dataset.pdel]); };
 $("#nuovo").onkeydown = e=>{ if(e.key==="Enter") aggiungiManuale(); };
 $("#lista").onclick = e=>{
   const t = e.target.closest("[data-chk],[data-piu],[data-meno]"); if(!t) return;
@@ -582,7 +694,9 @@ $("#btnPulisci").onclick = ()=>{ const ids=LISTA.filter(v=>v.fatto).map(v=>v.id)
 $("#btnSvuota").onclick = ()=>{ if(LISTA.length && confirm("Svuotare tutta la lista per tutta la famiglia?")) store.del(LISTA.map(v=>v.id)); };
 $("#btnShare").onclick = async ()=>{
   const g={}; LISTA.filter(v=>!v.fatto).forEach(v=>{(g[v.negozio||"altro"] ??= []).push(v)});
-  const txt = "🛒 Lista della spesa\n" + Object.keys(NEG).filter(k=>g[k]).map(k=>`\n${NEG[k].nome}:\n`+g[k].map(v=>`• ${v.nome}${(v.qta||1)>1?" ×"+v.qta:""}${v.prezzo!=null?" – "+euro(v.prezzo*(v.qta||1)):""}`).join("\n")).join("\n");
+  let txt = "🛒 Lista della spesa\n" + Object.keys(NEG).filter(k=>g[k]).map(k=>`\n${NEG[k].nome}:\n`+g[k].map(v=>`• ${v.nome}${(v.qta||1)>1?" ×"+v.qta:""}${v.prezzo!=null?" – "+euro(v.prezzo*(v.qta||1)):""}`).join("\n")).join("\n");
+  const da = LISTA.filter(v=>!v.fatto), tot = da.reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0), rs = da.reduce((s,v)=>s+risparmio(v),0);
+  if(tot) txt += `\n\nTotale: ${euro(tot)}${rs>=0.01?` · risparmio ${euro(rs)}`:""}`;
   try{ if(navigator.share) await navigator.share({text:txt}); else { await navigator.clipboard.writeText(txt); toast("Lista copiata"); } }catch{}
 };
 let tt; function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),1600); }
@@ -591,7 +705,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==
 
 /* ---------- avvio ---------- */
 if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
-LISTA = LS.get("listaLocale",[]); statoSync(); disegnaLista();
+LISTA = LS.get("listaLocale",[]); PREF = LS.get("preferitiLocali",[]); statoSync(); disegnaLista();
 caricaOfferte(); collega();
 if(!nomeUtente() && !LS.get("pin","")) setTimeout(()=>toast("Benvenuto! Imposta nome e codice in Famiglia"),900);
 </script>

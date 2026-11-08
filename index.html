@@ -294,6 +294,8 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
       <div class="field"><label for="impNome">Il tuo nome (si vede accanto ai prodotti che aggiungi)</label><input id="impNome" placeholder="Es. Alessandro" autocomplete="given-name"></div>
       <div class="field"><label for="impPin">Codice famiglia (uguale su tutti i telefoni di casa)</label><input id="impPin" placeholder="Es. caruso-spesa-2026" autocapitalize="none" autocomplete="off"></div>
       <button class="btn" id="btnSalva">Salva e collega</button>
+      <button class="btn" id="btnInvita" style="margin-top:10px;background:transparent;color:inherit;border:1.5px solid currentColor">📲 Invita un familiare</button>
+      <p class="sub" style="margin-top:6px">Manda su WhatsApp o Messaggi il link dell'app, il codice famiglia e le istruzioni per installarla.</p>
     </div>
     <div class="sec">
       <h3>⭐ Preferiti</h3>
@@ -822,6 +824,22 @@ $("#btnShare").onclick = async ()=>{
   const da = LISTA.filter(v=>!v.fatto), tot = da.reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0), rs = da.reduce((s,v)=>s+risparmio(v),0);
   if(tot) txt += `\n\nTotale: ${euro(tot)}${rs>=0.01?` · risparmio ${euro(rs)}`:""}`;
   try{ if(navigator.share) await navigator.share({text:txt}); else { await navigator.clipboard.writeText(txt); toast("Lista copiata"); } }catch{}
+};
+$("#btnInvita").onclick = async ()=>{
+  const pin=(LS.get("pin","")||"").trim();
+  if(!pin){ toast("Prima imposta il codice famiglia"); $("#impPin").focus(); return; }
+  const url=location.origin+location.pathname.replace(/index\.html$/,"");
+  const da=nomeUtente()?" da "+nomeUtente():"";
+  const txt=`🛒 Invito${da} alla Spesa di Famiglia!
+
+1. Apri questo link con Safari:
+${url}
+(se si apre in WhatsApp: tocca ⋯ e poi "Apri in Safari")
+2. Tocca Condividi (quadrato con freccia) → "Aggiungi alla schermata Home" → Aggiungi
+3. Apri l'app dall'icona → scheda Famiglia → scrivi il tuo nome e questo codice:
+${pin}
+4. Tocca "Salva e collega": quando vedi il pallino verde la lista è condivisa.`;
+  try{ if(navigator.share) await navigator.share({text:txt}); else { await navigator.clipboard.writeText(txt); toast("Invito copiato"); } }catch{}
 };
 let tt; function toast(m){ const t=$("#toast"); t.textContent=m; t.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>t.classList.remove("on"),1600); }
 addEventListener("scroll",()=>{

@@ -476,6 +476,9 @@ function disegnaOfferte(){
 /* ---------- volantini ufficiali ---------- */
 // per ogni negozio i volantini in corso, ricavati dai link delle offerte (pagine prodotto → pagina volantino del negozio)
 function volantiniDi(n){
+  // link diretti trovati dallo scaricamento (Lidl): solo quelli non ancora scaduti
+  const diretti = (n.volantini||[]).filter(v=>v.url && (!v.al || v.al>=oggi));
+  if(diretti.length) return diretti.slice().sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
   const per = {};
   for(const o of DATI.offerte) if(o.negozio===n.id){
     const link = o.link && !/\/p\//.test(o.link) ? o.link : n.volantino;
@@ -489,7 +492,8 @@ function disegnaVolantini(){
   const negozi = (DATI.negozi||[]).filter(n=>NEG[n.id]);
   $("#volantini").innerHTML = negozi.map(n=>{
     const vv = volantiniDi(n); if(!vv.length) return "";
-    const al = vv.map(v=>v.al).filter(Boolean).sort().pop();
+    // data del volantino in corso oggi (se nessuno è ancora iniziato, del primo che inizia)
+    const inCorso = vv.filter(v=>!v.dal || v.dal<=oggi), al = (inCorso.length?inCorso:vv).map(v=>v.al).filter(Boolean).sort().pop();
     const testo = `<span class="vk">${vv.length>1?vv.length+" volantini":"Volantino"}</span>
       <span class="vt"><span>${esc(NEG[n.id].nome)}</span><span>↗</span></span>
       <span class="vd">${al?"fino al "+dataIt(al):"sfoglia"}</span>`;
@@ -503,7 +507,7 @@ function apriVolantini(id){
   const vv = volantiniDi(n);
   $("#sheet").innerHTML = `<div class="grab"></div><button class="chiudi" id="shX" aria-label="Chiudi">✕</button>
     <h2>Volantini ${esc(NEG[id].nome)}</h2><div class="meta">${esc(n.negozio||"")}</div>
-    <div class="vlist">${vv.map(v=>`<a href="${esc(v.url)}" target="_blank" rel="noopener"><span>${v.dal&&v.al?`Dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:"Volantino"}<small>${v.n} offerte</small></span><span>↗</span></a>`).join("")}</div>`;
+    <div class="vlist">${vv.map(v=>`<a href="${esc(v.url)}" target="_blank" rel="noopener"><span>${v.dal&&v.dal>oggi?"Prossimo · ":""}${v.dal&&v.al?`Dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:"Volantino"}<small>${v.n?v.n+" offerte":"si apre sul sito "+esc(NEG[id].nome)}</small></span><span>↗</span></a>`).join("")}</div>`;
   $("#shX").onclick = chiudiSheet;
   $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on");
 }

@@ -1,5 +1,5 @@
 // Funzionamento offline: app sempre disponibile, offerte e foto in cache.
-const V = "spesa-v5";
+const V = "spesa-v6";
 const SHELL = ["./", "index.html", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {

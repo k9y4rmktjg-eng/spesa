@@ -55,6 +55,9 @@ h1{font-family:Fraunces,Georgia,serif;font-weight:800;font-size:30px;letter-spac
 .search{margin-top:12px;display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0 12px;height:44px}
 .search input{flex:1;border:0;background:transparent;outline:0;height:100%;font-size:16px}
 .search svg{flex:none;opacity:.5}
+.search input::-webkit-search-cancel-button{-webkit-appearance:none;display:none}
+.search .x{flex:none;width:26px;height:26px;border:0;border-radius:50%;background:var(--line);color:var(--ink2);font-size:13px;line-height:26px;padding:0}
+.alsodesc{grid-column:1/-1;margin:6px 0;padding:12px;border:1px dashed var(--line);border-radius:14px;background:transparent;color:var(--ink2);font-size:14px;font-weight:600}
 .chips{display:flex;gap:8px;overflow-x:auto;padding:10px 16px 2px;margin:0 -16px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{flex:none;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:99px;background:var(--card);border:1px solid var(--line);font-size:14px;font-weight:600;color:var(--ink2);transition:transform .1s}
@@ -184,10 +187,11 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
     <button class="sync" id="syncBadge" onclick="vai('imp')"><span class="dot" id="syncDot"></span><span id="syncTxt">…</span></button>
   </div>
   <div id="hdrOfferte">
-    <label class="search">
+    <form class="search" id="fCerca" role="search" action="javascript:void(0)">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Cerca: latte, caffè, pasta…" autocomplete="off">
-    </label>
+      <input id="q" type="search" enterkeyhint="search" placeholder="Cerca: latte, caffè, pasta…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button type="button" class="x" id="qX" aria-label="Cancella ricerca" hidden>✕</button>
+    </form>
     <div class="chips" id="chipNegozi"></div>
     <div class="chips small" id="chipCat"></div>
   </div>
@@ -304,7 +308,8 @@ async function caricaOfferte(){
   for(const o of DATI.offerte){
     o._pct = o.prezzo_prima && o.prezzo_prima>o.prezzo ? Math.round((1-o.prezzo/o.prezzo_prima)*100)
       : (parseInt((o.sconto||"").replace(/[^\d]/g,""))||0);
-    o._s = " "+(o.nome+" "+(o.marca||"")+" "+(o.dettaglio||"")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ");
+    o._n = norm(o.nome+" "+(o.marca||""));      // nome e marca: dove si cerca davvero
+    o._d = norm(o.dettaglio||"");                // descrizione: solo come risultati secondari
   }
   disegnaChipNegozi(); disegnaOfferte(); disegnaAvvisi(); disegnaImpNegozi();
   const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
@@ -314,24 +319,53 @@ async function caricaOfferte(){
 function logo(id,size){ const n=NEG[id]||NEG.altro; return `<span class="logo" style="background:${n.colore}${size?`;width:${size}px;height:${size}px`:""}">${n.sigla}</span>`; }
 
 function disegnaChipNegozi(){
-  const cnt = id => DATI.offerte.filter(o=>id==="tutti"||o.negozio===id).length;
+  const cnt = id => offerteFiltrate(id,"tutte").nome.length;
   const ids = ["tutti",...Object.keys(NEG).filter(k=>k!=="altro")];
   $("#chipNegozi").innerHTML = ids.map(id=>`<button class="chip ${filtro.neg===id?"on":""}" data-neg="${id}">${id==="tutti"?"Tutti":logo(id)+NEG[id].nome}<span class="n">${cnt(id)}</span></button>`).join("");
-  const base = DATI.offerte.filter(o=>filtro.neg==="tutti"||o.negozio===filtro.neg);
+  const base = offerteFiltrate(filtro.neg,"tutte").nome;
   const cats = {}; base.forEach(o=>{const c=o.categoria||"Altro"; cats[c]=(cats[c]||0)+1;});
+  if(filtro.cat!=="tutte" && !cats[filtro.cat] && !filtro.q) filtro.cat="tutte";
+  if(filtro.cat!=="tutte" && !cats[filtro.cat]) cats[filtro.cat]=0;
   const top = Object.entries(cats).sort((a,b)=>(a[0]==="Altro")-(b[0]==="Altro") || b[1]-a[1]);
-  if(filtro.cat!=="tutte" && !cats[filtro.cat]) filtro.cat="tutte";
-  $("#chipCat").innerHTML = top.length>1 ? [`<button class="chip ${filtro.cat==="tutte"?"on":""}" data-cat="tutte">Tutte le categorie</button>`,
+  $("#chipCat").innerHTML = top.length ? [`<button class="chip ${filtro.cat==="tutte"?"on":""}" data-cat="tutte">Tutte le categorie</button>`,
     ...top.map(([c,n])=>`<button class="chip ${filtro.cat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}<span class="n">${n}</span></button>`)].join("") : "";
 }
 
-function offerteFiltrate(){
-  const q = filtro.q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim().split(" ").filter(Boolean).map(w=>" "+w);
-  let l = DATI.offerte.filter(o=>(filtro.neg==="tutti"||o.negozio===filtro.neg)
-    && (filtro.cat==="tutte"||(o.categoria||"Altro")===filtro.cat) && q.every(w=>o._s.includes(w)));
-  const ord = {sconto:(a,b)=>b._pct-a._pct||a.prezzo-b.prezzo, prezzo:(a,b)=>a.prezzo-b.prezzo,
-    nome:(a,b)=>a.nome.localeCompare(b.nome,"it"), scade:(a,b)=>(a.al||"9").localeCompare(b.al||"9")}[filtro.ord];
-  return l.sort(ord);
+/* ---------- ricerca ---------- */
+// testo senza accenti e punteggiatura, con uno spazio prima e dopo: " caffe qualita espresso "
+function norm(t){ return " "+(t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim()+" "; }
+const escRx = t => t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+// per ogni parola cercata: parola intera (anche singolare/plurale: mela/mele, uovo/uova) oppure inizio di parola
+function paroleRicerca(q){
+  return norm(q).trim().split(" ").filter(Boolean).map(w=>{
+    const tema = w.length>=4 && /[aeio]$/.test(w) ? escRx(w.slice(0,-1))+"[aeio]" : escRx(w);
+    return {intera:new RegExp(" (?:"+escRx(w)+"|"+tema+") "), inizio:" "+w};
+  });
+}
+// 2 = tutte le parole intere nel nome · 1 = nel nome come inizio di parola · 0 = solo nella descrizione · -1 = no
+function punteggio(o, Q){
+  if(!Q.length) return 2;
+  if(Q.every(w=>w.intera.test(o._n))) return 2;
+  if(Q.every(w=>w.intera.test(o._n)||o._n.includes(w.inizio))) return 1;
+  const t = o._n+o._d;
+  return Q.every(w=>w.intera.test(t)||t.includes(w.inizio)) ? 0 : -1;
+}
+const ORDINI = {sconto:(a,b)=>b._pct-a._pct||a.prezzo-b.prezzo, prezzo:(a,b)=>a.prezzo-b.prezzo,
+  nome:(a,b)=>a.nome.localeCompare(b.nome,"it"), scade:(a,b)=>(a.al||"9").localeCompare(b.al||"9")};
+// restituisce {nome:[...], descr:[...]}: i prodotti trovati nel nome e quelli trovati solo nella descrizione
+function offerteFiltrate(neg=filtro.neg, cat=filtro.cat){
+  const Q = paroleRicerca(filtro.q), nome=[], descr=[];
+  for(const o of DATI.offerte){
+    if(neg!=="tutti" && o.negozio!==neg) continue;
+    if(cat!=="tutte" && (o.categoria||"Altro")!==cat) continue;
+    const p = punteggio(o,Q); if(p<0) continue;
+    o._p = p; (p>0?nome:descr).push(o);
+  }
+  const ord = ORDINI[filtro.ord];
+  // se ci sono parole intere ("mela"), quelle che solo iniziano così ("melanzane") passano tra i risultati secondari
+  const principali = nome.some(o=>o._p===2) ? nome.filter(o=>o._p===2) : nome;
+  const altri = nome.filter(o=>!principali.includes(o)).sort(ord).concat(descr.sort(ord));
+  return {nome:principali.sort(ord), descr:altri};
 }
 
 function qtaInLista(id){ return LISTA.filter(v=>v.offertaId===id && !v.fatto).reduce((s,v)=>s+(v.qta||1),0); }
@@ -353,14 +387,21 @@ function cardHTML(o){
 }
 
 function disegnaOfferte(){
-  const l = offerteFiltrate();
-  $("#conteggio").textContent = l.length ? `${l.length} offerte` : "";
+  const r = offerteFiltrate(), l = filtro.anchedescr ? r.nome.concat(r.descr) : r.nome;
+  $("#conteggio").textContent = l.length ? `${l.length} offert${l.length===1?"a":"e"}` : "";
   if(!DATI.offerte.length){
     $("#grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🧺</div><b>Le offerte arriveranno col primo aggiornamento</b><br>Intanto puoi già usare la lista della spesa.</div>`;
     $("#more").hidden = true; return;
   }
-  if(!l.length){ $("#grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🔎</div>Nessuna offerta trovata.<br>Puoi aggiungerlo a mano nella Lista.</div>`; $("#more").hidden=true; return; }
-  $("#grid").innerHTML = l.slice(0,filtro.limite).map(cardHTML).join("");
+  const altri = !filtro.anchedescr && r.descr.length && l.length<=filtro.limite
+    ? `<button class="alsodesc" id="anchedescr">Mostra anche ${r.descr.length} risultat${r.descr.length===1?"o simile":"i simili"} (parole che iniziano con «${esc(filtro.q.trim())}» o citate nella descrizione)</button>` : "";
+  if(!l.length && !altri){
+    const filtri = filtro.neg!=="tutti" || filtro.cat!=="tutte";
+    $("#grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🔎</div>Nessuna offerta per «${esc(filtro.q.trim())}»${filtri?" con i filtri scelti":""}.<br>
+      ${filtri?`<button class="alsodesc" id="tuttiFiltri" style="margin-top:12px">Cerca in tutti i negozi e categorie</button><br>`:""}Puoi aggiungerlo a mano nella Lista.</div>`;
+    $("#more").hidden=true; return;
+  }
+  $("#grid").innerHTML = l.slice(0,filtro.limite).map(cardHTML).join("") + altri;
   $("#more").hidden = l.length<=filtro.limite;
 }
 
@@ -510,10 +551,21 @@ window.vai = v => {
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>vai(b.dataset.v));
 $("#chipNegozi").onclick = e=>{ const b=e.target.closest("[data-neg]"); if(!b) return; filtro.neg=b.dataset.neg; filtro.cat="tutte"; filtro.limite=40; disegnaChipNegozi(); disegnaOfferte(); };
 $("#chipCat").onclick = e=>{ const b=e.target.closest("[data-cat]"); if(!b) return; filtro.cat=b.dataset.cat; filtro.limite=40; disegnaChipNegozi(); disegnaOfferte(); };
-let tq; $("#q").oninput = e=>{ clearTimeout(tq); tq=setTimeout(()=>{filtro.q=e.target.value; filtro.limite=40; disegnaOfferte();},150); };
+function cerca(testo){
+  filtro.q = testo; filtro.limite = 40; filtro.anchedescr = false;
+  $("#qX").hidden = !testo; $("#q").value = testo;
+  disegnaChipNegozi(); disegnaOfferte();
+  const g = $("#grid").getBoundingClientRect().top, h = document.querySelector("header").getBoundingClientRect().bottom;
+  if(g < h) window.scrollBy({top:g-h-8});   // riporta i risultati in vista
+}
+let tq; $("#q").oninput = e=>{ clearTimeout(tq); const v=e.target.value; $("#qX").hidden=!v; tq=setTimeout(()=>cerca(v),150); };
+$("#qX").onclick = ()=>{ clearTimeout(tq); cerca(""); $("#q").focus(); };
+$("#fCerca").onsubmit = e=>{ e.preventDefault(); clearTimeout(tq); cerca($("#q").value); $("#q").blur(); };
 $("#ordina").onchange = e=>{ filtro.ord=e.target.value; disegnaOfferte(); };
 $("#more").onclick = ()=>{ filtro.limite+=40; disegnaOfferte(); };
 $("#grid").onclick = e=>{
+  if(e.target.closest("#anchedescr")){ filtro.anchedescr=true; disegnaOfferte(); return; }
+  if(e.target.closest("#tuttiFiltri")){ filtro.neg="tutti"; filtro.cat="tutte"; disegnaChipNegozi(); disegnaOfferte(); return; }
   const a=e.target.closest("[data-add]"); if(a){ const o=DATI.offerte.find(x=>x.id===a.dataset.add); if(o){ aggiungiOfferta(o); } return; }
   const c=e.target.closest(".card"); if(c) apriDettaglio(c.dataset.id);
 };

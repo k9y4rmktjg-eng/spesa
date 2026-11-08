@@ -304,7 +304,7 @@ async function caricaOfferte(){
   for(const o of DATI.offerte){
     o._pct = o.prezzo_prima && o.prezzo_prima>o.prezzo ? Math.round((1-o.prezzo/o.prezzo_prima)*100)
       : (parseInt((o.sconto||"").replace(/[^\d]/g,""))||0);
-    o._s = (o.nome+" "+(o.marca||"")+" "+(o.dettaglio||"")+" "+(o.categoria||"")).toLowerCase();
+    o._s = " "+(o.nome+" "+(o.marca||"")+" "+(o.dettaglio||"")).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ");
   }
   disegnaChipNegozi(); disegnaOfferte(); disegnaAvvisi(); disegnaImpNegozi();
   const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
@@ -326,7 +326,7 @@ function disegnaChipNegozi(){
 }
 
 function offerteFiltrate(){
-  const q = filtro.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const q = filtro.q.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g," ").trim().split(" ").filter(Boolean).map(w=>" "+w);
   let l = DATI.offerte.filter(o=>(filtro.neg==="tutti"||o.negozio===filtro.neg)
     && (filtro.cat==="tutte"||(o.categoria||"Altro")===filtro.cat) && q.every(w=>o._s.includes(w)));
   const ord = {sconto:(a,b)=>b._pct-a._pct||a.prezzo-b.prezzo, prezzo:(a,b)=>a.prezzo-b.prezzo,

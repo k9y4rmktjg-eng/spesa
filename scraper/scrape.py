@@ -525,8 +525,37 @@ def conad(ctx, n):
     return offerte
 
 
+def lidl_volantini(ctx, n):
+    """Link diretti ai volantini settimanali Lidl (si aprono senza scegliere il punto vendita)."""
+    page = ctx.new_page()
+    try:
+        page.goto(n["volantino"], wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(2500)
+        ids = page.eval_on_selector_all(
+            "[id^='flyer-']",
+            "els => els.filter(e => /settimanal/i.test(e.textContent)).map(e => e.id.slice(6))")
+        volantini = []
+        for fid in dict.fromkeys(ids):
+            if not re.fullmatch(r"[0-9a-f-]{36}", fid):
+                continue
+            r = page.request.get(f"https://endpoints.leaflets.schwarz/v4/flyer?flyer_identifier={fid}&region_id=0",
+                                 timeout=30000)
+            if not r.ok:
+                continue
+            f = (r.json() or {}).get("flyer") or {}
+            if f.get("flyerUrlAbsolute"):
+                volantini.append({"url": f["flyerUrlAbsolute"], "nome": f.get("name") or "",
+                                  "dal": f.get("offerStartDate") or f.get("startDate") or "",
+                                  "al": f.get("offerEndDate") or f.get("endDate") or "", "n": 0})
+        log(f"  Lidl: {len(volantini)} volantini settimanali")
+        return volantini
+    finally:
+        page.close()
+
+
 # ---------------------------------------------------------------- main
 FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad}
+VOLANTINI = {"lidl": lidl_volantini}   # link diretti ai volantini, dove il sito li nasconde
 
 
 def main():
@@ -572,6 +601,13 @@ def main():
                 stato.update(ok=False, n=len(tenute), aggiornato=prima.get("aggiornato"),
                              messaggio=str(e)[:200])
                 log(f"  ERRORE: {e} (tengo {len(tenute)} offerte precedenti)")
+            if n["tipo"] in VOLANTINI:  # facoltativo: se fallisce restano i link di prima
+                try:
+                    stato["volantini"] = VOLANTINI[n["tipo"]](ctx, n)
+                except Exception as e:
+                    log(f"  volantini non trovati: {e}")
+                    if stati_vecchi.get(n["id"], {}).get("volantini"):
+                        stato["volantini"] = stati_vecchi[n["id"]]["volantini"]
             stati.append(stato)
             ctx.close()
         browser.close()

@@ -1,6 +1,6 @@
 {
  "zona": "Nonantola (MO) 41015",
- "aggiornato": "2026-11-09T13:12:16+00:00",
+ "aggiornato": "2026-11-09T13:40:35+00:00",
  "negozi": [
   {
    "id": "lidl",
@@ -10,7 +10,7 @@
    "negozio": "",
    "ok": true,
    "n": 183,
-   "aggiornato": "2026-11-09T13:12:16+00:00",
+   "aggiornato": "2026-11-09T13:40:35+00:00",
    "messaggio": "",
    "volantini": [
     {
@@ -158,7 +158,7 @@
    "negozio": "Conad Via Provinciale Est 10, Nonantola",
    "ok": true,
    "n": 208,
-   "aggiornato": "2026-11-09T13:12:16+00:00",
+   "aggiornato": "2026-11-09T13:40:35+00:00",
    "messaggio": ""
   },
   {
@@ -169,7 +169,7 @@
    "negozio": "Coop Nonantola, Piazza Ilaria Alpi 15",
    "ok": true,
    "n": 847,
-   "aggiornato": "2026-11-09T13:12:16+00:00",
+   "aggiornato": "2026-11-09T13:40:35+00:00",
    "messaggio": "",
    "volantini": [
     {

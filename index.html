@@ -504,6 +504,10 @@ function disegnaOfferte(){
 function volantiniDi(n){
   // link diretti trovati dallo scaricamento (Lidl): solo quelli non ancora scaduti
   const diretti = (n.volantini||[]).filter(v=>v.url && (!v.al || v.al>=oggi));
+  // se ci sono volantini da sfogliare nell'app, mostro solo quelli (gli altri link portano a elenchi già nelle offerte)
+  const sfogliabili = diretti.filter(v=>v.pagine?.length);
+  if(sfogliabili.length) return sfogliabili.map(v=>({...v, n: v.n || DATI.offerte.filter(o=>o.negozio===n.id && o.link===v.url).length}))
+    .sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
   if(diretti.length) return diretti.map(v=>({...v, n: v.n || DATI.offerte.filter(o=>o.negozio===n.id && o.link===v.url).length}))
     .sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
   const per = {};
@@ -562,10 +566,10 @@ function apriSfogliatore(id, k){
   $("#sf").style.setProperty("--c", NEG[id].colore);
   $("#sfTit").innerHTML = `${esc(NEG[id].nome)}${v.nome&&!/^offerte valide/i.test(v.nome)?" · "+esc(v.nome):""}<small>${v.dal&&v.al?`dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:""}</small>`;
   // le prime pagine subito, le altre quando ci si avvicina
-  $("#sfPag").innerHTML = v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}"><img ${i<3?`src="${esc(p)}"`:`data-src="${esc(p)}"`} decoding="async" alt="Pagina ${i+1}"></div>`).join("");
+  $("#sfPag").innerHTML = v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}"><img ${i<5?`src="${esc(p)}"`:`data-src="${esc(p)}"`} alt="Pagina ${i+1}"></div>`).join("");
   $("#sfPag").scrollLeft = 0;
   $("#sf").classList.add("on"); document.body.style.overflow="hidden";
-  sfAggiorna(); precaricaPagine(v.pagine);
+  sfAggiorna(); precaricaPagine(v.pagine, true);
   const h=$("#sfHint"); h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
   history.pushState({sf:1}, "");
 }
@@ -580,12 +584,15 @@ function sfAggiorna(){
   $("#sfPrev").disabled = i<=0; $("#sfNext").disabled = i>=SF.pag.length-1;
   el.querySelectorAll(".sf-p").forEach(p=>{
     const d=Math.abs(+p.dataset.i-i), img=p.firstElementChild;
-    if(d<=2 && img.dataset.src){ img.src=img.dataset.src; delete img.dataset.src; }
+    if(d<=4 && img.dataset.src){ img.src=img.dataset.src; delete img.dataset.src; img.decode?.().catch(()=>{}); }
     if(d>0 && p.classList.contains("zoom")) p.classList.remove("zoom");
   });
 }
 function sfVai(d){ const el=$("#sfPag"); el.scrollTo({left:(SF.i+d)*el.clientWidth, behavior:"smooth"}); }
-let sfT; $("#sfPag").addEventListener("scroll",()=>{ clearTimeout(sfT); sfT=setTimeout(sfAggiorna,60); },{passive:true});
+let sfT, sfR=0; $("#sfPag").addEventListener("scroll",()=>{
+  clearTimeout(sfT); sfT=setTimeout(sfAggiorna,60);
+  if(!sfR) sfR=requestAnimationFrame(()=>{ sfR=0; sfAggiorna(); });
+},{passive:true});
 $("#sfPrev").onclick=()=>sfVai(-1); $("#sfNext").onclick=()=>sfVai(1);
 $("#sfX").onclick=()=>chiudiSfogliatore();
 window.addEventListener("popstate",()=>chiudiSfogliatore(true));
@@ -609,10 +616,16 @@ $("#sfPag").addEventListener("touchend",e=>{
 $("#sfPag").addEventListener("dblclick",e=>sfZoom(e,e.clientX,e.clientY));
 
 // scarica in anticipo le pagine nella cache del telefono, una alla volta senza rallentare l'app
-const giaPrecaricate = new Set();
-function precaricaPagine(lista){
-  const coda = lista.filter(p=>!giaPrecaricate.has(p)); coda.forEach(p=>giaPrecaricate.add(p));
-  (async()=>{ for(const p of coda){ try{ await fetch(p); }catch{} } })();
+const giaPrecaricate = new Set(); let codaPre = [], preAttivo = false;
+function precaricaPagine(lista, urgente){
+  const nuove = lista.filter(p=>!giaPrecaricate.has(p));
+  codaPre = urgente ? [...nuove, ...codaPre.filter(p=>!nuove.includes(p))] : [...codaPre, ...nuove.filter(p=>!codaPre.includes(p))];
+  if(preAttivo) return; preAttivo = true;
+  (async()=>{ // 3 download alla volta
+    const lavora = async()=>{ while(codaPre.length){ const p=codaPre.shift(); if(giaPrecaricate.has(p)) continue;
+      try{ const r=await fetch(p); if(r.ok){ await r.blob(); giaPrecaricate.add(p); } }catch{} } };
+    await Promise.all([lavora(),lavora(),lavora()]); preAttivo = false;
+  })();
 }
 function precaricaVolantini(){
   if(navigator.connection?.saveData) return;

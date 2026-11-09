@@ -18,7 +18,9 @@ DATA = ROOT / "data"
 OUT = DATA / "offerte.json"
 IMG_DIR = DATA / "img"
 VOL_DIR = DATA / "vol"          # pagine dei volantini, da sfogliare dentro l'app
-VOL_LARGH = 1000                 # larghezza pagine salvate (leggibili su iPhone, file leggeri)
+VOL_LARGH = 900                  # larghezza pagine salvate (leggibili su iPhone, file leggeri)
+VOL_QUAL = 66                    # qualità JPEG delle pagine
+VOL_VER = f"{VOL_LARGH}-{VOL_QUAL}"  # se cambia, le pagine già salvate vengono ricompresse
 CFG = json.loads((ROOT / "scraper" / "negozi.json").read_text(encoding="utf-8"))
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -527,6 +529,14 @@ def conad(ctx, n):
     return offerte
 
 
+def _salva_jpg(im, dest):
+    im = im.convert("RGB")
+    if im.width > VOL_LARGH:
+        im = im.resize((VOL_LARGH, round(im.height * VOL_LARGH / im.width)), 1)  # 1 = LANCZOS
+    # non progressivo: su iPhone si decodifica in un colpo solo, più veloce da sfogliare
+    im.save(dest, "JPEG", quality=VOL_QUAL, optimize=True)
+
+
 def salva_pagine(ctx, neg, vid, urls, referer=""):
     """Scarica le pagine di un volantino in data/vol/<negozio>/<id>/NN.jpg, ridotte e compresse.
     Se il volantino era già stato scaricato non lo riscarica (così GitHub non si riempie)."""
@@ -534,6 +544,12 @@ def salva_pagine(ctx, neg, vid, urls, referer=""):
     cart = VOL_DIR / neg / re.sub(r"[^A-Za-z0-9_-]", "", vid)
     nomi = [f"{i + 1:02d}.jpg" for i in range(len(urls))]
     if cart.exists() and all((cart / x).exists() for x in nomi):
+        mark = cart / ".versione"
+        if not mark.exists() or mark.read_text().strip() != VOL_VER:
+            for x in nomi:  # ricomprime le pagine già salvate senza riscaricarle
+                _salva_jpg(Image.open(cart / x), cart / x)
+            mark.write_text(VOL_VER)
+            log(f"   ricompresse {len(nomi)} pagine in {cart.relative_to(ROOT)}")
         return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
     tmp = cart.with_name(cart.name + "_new")
     shutil.rmtree(tmp, ignore_errors=True)
@@ -542,10 +558,8 @@ def salva_pagine(ctx, neg, vid, urls, referer=""):
         r = ctx.request.get(url, timeout=60000, headers={"Referer": referer} if referer else {})
         if not r.ok:
             raise RuntimeError(f"pagina non scaricata HTTP {r.status}")
-        im = Image.open(io.BytesIO(r.body())).convert("RGB")
-        if im.width > VOL_LARGH:
-            im = im.resize((VOL_LARGH, round(im.height * VOL_LARGH / im.width)), Image.LANCZOS)
-        im.save(tmp / nome, "JPEG", quality=72, optimize=True, progressive=True)
+        _salva_jpg(Image.open(io.BytesIO(r.body())), tmp / nome)
+    (tmp / ".versione").write_text(VOL_VER)
     shutil.rmtree(cart, ignore_errors=True)
     tmp.rename(cart)
     log(f"   scaricate {len(urls)} pagine in {cart.relative_to(ROOT)}")

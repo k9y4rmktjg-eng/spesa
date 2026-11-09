@@ -588,7 +588,12 @@ function sfAggiorna(){
     if(d>0 && p.classList.contains("zoom")) p.classList.remove("zoom");
   });
 }
-function sfVai(d){ const el=$("#sfPag"); el.scrollTo({left:(SF.i+d)*el.clientWidth, behavior:"smooth"}); }
+function sfVai(d){ // anche con tocchi veloci sulle frecce va avanti di una pagina per tocco
+  const el=$("#sfPag"), t=Math.max(0, Math.min(SF.pag.length-1, (SF.t ?? SF.i)+d)); SF.t=t;
+  $("#sfNum").textContent = `${t+1} / ${SF.pag.length}`;
+  el.scrollTo({left:t*el.clientWidth, behavior:"smooth"});
+  clearTimeout(SF.tt); SF.tt=setTimeout(()=>{ SF.t=null; if(Math.round(el.scrollLeft/el.clientWidth)!==t) el.scrollLeft=t*el.clientWidth; sfAggiorna(); }, 600);
+}
 let sfT, sfR=0; $("#sfPag").addEventListener("scroll",()=>{
   clearTimeout(sfT); sfT=setTimeout(sfAggiorna,60);
   if(!sfR) sfR=requestAnimationFrame(()=>{ sfR=0; sfAggiorna(); });

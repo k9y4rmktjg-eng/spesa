@@ -17,6 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "data"
 OUT = DATA / "offerte.json"
 IMG_DIR = DATA / "img"
+VOL_DIR = DATA / "vol"          # pagine dei volantini, da sfogliare dentro l'app
+VOL_LARGH = 1000                 # larghezza pagine salvate (leggibili su iPhone, file leggeri)
 CFG = json.loads((ROOT / "scraper" / "negozi.json").read_text(encoding="utf-8"))
 
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -525,8 +527,33 @@ def conad(ctx, n):
     return offerte
 
 
+def salva_pagine(ctx, neg, vid, urls, referer=""):
+    """Scarica le pagine di un volantino in data/vol/<negozio>/<id>/NN.jpg, ridotte e compresse.
+    Se il volantino era già stato scaricato non lo riscarica (così GitHub non si riempie)."""
+    from PIL import Image
+    cart = VOL_DIR / neg / re.sub(r"[^A-Za-z0-9_-]", "", vid)
+    nomi = [f"{i + 1:02d}.jpg" for i in range(len(urls))]
+    if cart.exists() and all((cart / x).exists() for x in nomi):
+        return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
+    tmp = cart.with_name(cart.name + "_new")
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True)
+    for url, nome in zip(urls, nomi):
+        r = ctx.request.get(url, timeout=60000, headers={"Referer": referer} if referer else {})
+        if not r.ok:
+            raise RuntimeError(f"pagina non scaricata HTTP {r.status}")
+        im = Image.open(io.BytesIO(r.body())).convert("RGB")
+        if im.width > VOL_LARGH:
+            im = im.resize((VOL_LARGH, round(im.height * VOL_LARGH / im.width)), Image.LANCZOS)
+        im.save(tmp / nome, "JPEG", quality=72, optimize=True, progressive=True)
+    shutil.rmtree(cart, ignore_errors=True)
+    tmp.rename(cart)
+    log(f"   scaricate {len(urls)} pagine in {cart.relative_to(ROOT)}")
+    return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
+
+
 def lidl_volantini(ctx, n):
-    """Link diretti ai volantini settimanali Lidl (si aprono senza scegliere il punto vendita)."""
+    """Volantini settimanali Lidl: link diretto e pagine da sfogliare nell'app."""
     page = ctx.new_page()
     try:
         page.goto(n["volantino"], wait_until="domcontentloaded", timeout=60000)
@@ -543,19 +570,62 @@ def lidl_volantini(ctx, n):
             if not r.ok:
                 continue
             f = (r.json() or {}).get("flyer") or {}
-            if f.get("flyerUrlAbsolute"):
-                volantini.append({"url": f["flyerUrlAbsolute"], "nome": f.get("name") or "",
-                                  "dal": f.get("offerStartDate") or f.get("startDate") or "",
-                                  "al": f.get("offerEndDate") or f.get("endDate") or "", "n": 0})
+            if not f.get("flyerUrlAbsolute"):
+                continue
+            v = {"url": f["flyerUrlAbsolute"], "nome": f.get("name") or "",
+                 "dal": f.get("offerStartDate") or f.get("startDate") or "",
+                 "al": f.get("offerEndDate") or f.get("endDate") or "", "n": 0}
+            pg = [p for p in (f.get("pages") or []) if p.get("zoom") or p.get("image")]
+            try:
+                v["pagine"] = salva_pagine(ctx, "lidl", fid, [p.get("zoom") or p["image"] for p in pg])
+            except Exception as e:
+                log(f"   pagine Lidl non scaricate: {e}")
+            volantini.append(v)
         log(f"  Lidl: {len(volantini)} volantini settimanali")
         return volantini
     finally:
         page.close()
 
 
+def coop_volantini(ctx, n):
+    """Volantini Coop del negozio: link e, se sfogliabili, pagine da sfogliare nell'app."""
+    code, base = n["codice_negozio"], "https://svdgt.coopalleanza3-0.it/apim"
+    hdr = {"Referer": n["pagina_negozio"], "Accept": "application/json"}
+    r = ctx.request.get(f"{base}/leaflets/{code}", headers=hdr, timeout=60000)
+    if not r.ok:
+        raise RuntimeError(f"HTTP {r.status}")
+    volantini = []
+    for lf in r.json().get("leaflets", []):
+        v = {"url": lf.get("url") or n["volantino"], "nome": lf.get("titolo") or "",
+             "dal": iso(lf.get("valido_da")), "al": iso(lf.get("valido_a")), "n": 0}
+        if lf.get("sfogliabile"):
+            try:
+                s = ctx.request.get(f"{base}/{lf['id']}/{code}/sfogliabile", headers=hdr, timeout=60000).json()
+                urls = [p["path"] for p in sorted(s.get("pages", []), key=lambda p: p.get("number", 0)) if p.get("path")]
+                if urls:
+                    v["pagine"] = salva_pagine(ctx, "coop", lf["id"], urls, n["pagina_negozio"])
+            except Exception as e:
+                log(f"   pagine Coop non scaricate ({v['nome']}): {e}")
+        volantini.append(v)
+    log(f"  Coop: {len(volantini)} volantini ({sum(1 for v in volantini if v.get('pagine'))} sfogliabili)")
+    return volantini
+
+
+def pulisci_volantini(stati):
+    """Cancella le pagine dei volantini che non servono più (scaduti o tolti dal sito)."""
+    usate = {str(Path(p).parent) for s in stati for v in s.get("volantini") or [] for p in v.get("pagine") or []}
+    if not VOL_DIR.exists():
+        return
+    for neg in VOL_DIR.iterdir():
+        for cart in neg.iterdir() if neg.is_dir() else []:
+            if str(cart.relative_to(ROOT)) not in usate:
+                shutil.rmtree(cart, ignore_errors=True)
+                log(f"  tolte le pagine vecchie {cart.relative_to(ROOT)}")
+
+
 # ---------------------------------------------------------------- main
 FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad}
-VOLANTINI = {"lidl": lidl_volantini}   # link diretti ai volantini, dove il sito li nasconde
+VOLANTINI = {"lidl": lidl_volantini, "coop": coop_volantini}   # link e pagine dei volantini
 
 
 def main():
@@ -612,6 +682,7 @@ def main():
             ctx.close()
         browser.close()
 
+    pulisci_volantini(stati)
     DATA.mkdir(exist_ok=True)
     OUT.write_text(json.dumps({"zona": CFG["zona"], "aggiornato": ora, "negozi": stati,
                                "offerte": risultato}, ensure_ascii=False, indent=1), encoding="utf-8")

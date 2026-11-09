@@ -226,6 +226,24 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
 .sheet .row .btn{flex:1;height:50px;font-size:16px}
 .toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;transition:all .25s;z-index:60;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* sfogliatore volantini */
+.sf{position:fixed;inset:0;z-index:70;background:#111;color:#fff;display:none;flex-direction:column}
+.sf.on{display:flex;animation:fade .2s ease}
+.sf-top{display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:var(--c,#222)}
+.sf-top b{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-top small{display:block;font-weight:500;opacity:.8;font-size:12px}
+.sf-top button{flex:none;width:36px;height:36px;border:0;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;font-size:16px}
+.sf-pag{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.sf-pag::-webkit-scrollbar{display:none}
+.sf-p{touch-action:manipulation;flex:0 0 100%;height:100%;scroll-snap-align:center;scroll-snap-stop:always;overflow:auto;display:flex;align-items:center;justify-content:center;-webkit-overflow-scrolling:touch}
+.sf-p img{max-width:100%;max-height:100%;object-fit:contain;background:#fff;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.sf-p.zoom{align-items:flex-start;justify-content:flex-start}
+.sf-p.zoom img{max-width:none;max-height:none;width:240%}
+.sf-bot{display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 12px calc(10px + var(--safe-b));font-size:14px;font-weight:600}
+.sf-bot button{width:44px;height:36px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;font-size:18px}
+.sf-bot button:disabled{opacity:.3}
+.sf-hint{position:absolute;left:50%;bottom:calc(64px + var(--safe-b));transform:translateX(-50%);background:rgba(0,0,0,.7);padding:6px 12px;border-radius:99px;font-size:12.5px;pointer-events:none;transition:opacity .5s}
 </style>
 </head>
 <body>
@@ -333,6 +351,12 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
+<div class="sf" id="sf">
+  <div class="sf-top"><b id="sfTit"></b><button id="sfX" aria-label="Chiudi volantino">✕</button></div>
+  <div class="sf-pag" id="sfPag"></div>
+  <div class="sf-bot"><button id="sfPrev" aria-label="Pagina precedente">‹</button><span id="sfNum"></span><button id="sfNext" aria-label="Pagina successiva">›</button></div>
+  <div class="sf-hint" id="sfHint">Doppio tocco per ingrandire</div>
+</div>
 
 <script type="module">
 const CFG = window.SPESA_CONFIG || {};
@@ -380,7 +404,7 @@ async function caricaOfferte(){
     o._n = norm(o.nome+" "+(o.marca||""));      // nome e marca: dove si cerca davvero
     o._d = norm(o.dettaglio||"");                // descrizione: solo come risultati secondari
   }
-  segnaPreferiti(); disegnaChipNegozi(); disegnaOfferte(); disegnaVolantini(); disegnaAvvisi(); disegnaImpNegozi(); aggiornaPreferiti(); disegnaLista();
+  segnaPreferiti(); disegnaChipNegozi(); disegnaOfferte(); disegnaVolantini(); precaricaVolantini(); disegnaAvvisi(); disegnaImpNegozi(); aggiornaPreferiti(); disegnaLista();
   const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
   $("#sottotitolo").textContent = (CFG.zona||"Nonantola") + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
 }
@@ -480,7 +504,8 @@ function disegnaOfferte(){
 function volantiniDi(n){
   // link diretti trovati dallo scaricamento (Lidl): solo quelli non ancora scaduti
   const diretti = (n.volantini||[]).filter(v=>v.url && (!v.al || v.al>=oggi));
-  if(diretti.length) return diretti.slice().sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
+  if(diretti.length) return diretti.map(v=>({...v, n: v.n || DATI.offerte.filter(o=>o.negozio===n.id && o.link===v.url).length}))
+    .sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
   const per = {};
   for(const o of DATI.offerte) if(o.negozio===n.id){
     const link = o.link && !/\/p\//.test(o.link) ? o.link : n.volantino;
@@ -499,8 +524,9 @@ function disegnaVolantini(){
     const testo = `<span class="vk">${vv.length>1?vv.length+" volantini":"Volantino"}</span>
       <span class="vt"><span>${esc(NEG[n.id].nome)}</span><span>↗</span></span>
       <span class="vd">${al?"fino al "+dataIt(al):"sfoglia"}</span>`;
+    if(vv.length===1 && vv[0].pagine?.length) return `<button class="vol" style="--c:${NEG[n.id].colore}" data-sf="${n.id}|0">${testo.replace("↗","📖")}</button>`;
     return vv.length>1
-      ? `<button class="vol" style="--c:${NEG[n.id].colore}" data-vol="${n.id}">${testo}</button>`
+      ? `<button class="vol" style="--c:${NEG[n.id].colore}" data-vol="${n.id}">${testo.replace("↗",vv.some(v=>v.pagine?.length)?"📖":"↗")}</button>`
       : `<a class="vol" style="--c:${NEG[n.id].colore}" href="${esc(vv[0].url)}" target="_blank" rel="noopener">${testo}</a>`;
   }).join("");
 }
@@ -509,11 +535,99 @@ function apriVolantini(id){
   const vv = volantiniDi(n);
   $("#sheet").innerHTML = `<div class="grab"></div><button class="chiudi" id="shX" aria-label="Chiudi">✕</button>
     <h2>Volantini ${esc(NEG[id].nome)}</h2><div class="meta">${esc(n.negozio||"")}</div>
-    <div class="vlist">${vv.map(v=>`<a href="${esc(v.url)}" target="_blank" rel="noopener"><span>${v.dal&&v.dal>oggi?"Prossimo · ":""}${v.dal&&v.al?`Dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:"Volantino"}<small>${v.n?v.n+" offerte":"si apre sul sito "+esc(NEG[id].nome)}</small></span><span>↗</span></a>`).join("")}</div>`;
+    <div class="vlist">${vv.map((v,i)=>{
+      const tit = `${v.dal&&v.dal>oggi?"Prossimo · ":""}${v.nome&&!/^offerte valide/i.test(v.nome)?esc(v.nome)+" · ":""}${v.dal&&v.al?`dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:"Volantino"}`;
+      return v.pagine?.length
+        ? `<a href="#" data-sf="${id}|${i}"><span>${tit}<small>${v.pagine.length} pagine${v.n?" · "+v.n+" offerte":""} · sfoglia nell'app</small></span><span>📖</span></a>`
+        : `<a href="${esc(v.url)}" target="_blank" rel="noopener"><span>${tit}<small>${v.n?v.n+" offerte · ":""}si apre sul sito ${esc(NEG[id].nome)}</small></span><span>↗</span></a>`;
+    }).join("")}</div>`;
   $("#shX").onclick = chiudiSheet;
   $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on");
 }
-$("#volantini").onclick = e=>{ const b=e.target.closest("[data-vol]"); if(b) apriVolantini(b.dataset.vol); };
+$("#volantini").onclick = e=>{
+  const s=e.target.closest("[data-sf]"); if(s){ const [id,i]=s.dataset.sf.split("|"); return apriSfogliatore(id,+i); }
+  const b=e.target.closest("[data-vol]"); if(b) apriVolantini(b.dataset.vol);
+};
+$("#sheet").addEventListener("click", e=>{
+  const s=e.target.closest("[data-sf]"); if(!s) return;
+  e.preventDefault(); const [id,i]=s.dataset.sf.split("|"); chiudiSheet(); apriSfogliatore(id,+i);
+});
+
+/* ---------- sfogliatore volantini (pagine già scaricate su GitHub) ---------- */
+const SF = {pag:[], i:0};
+function apriSfogliatore(id, k){
+  const n = (DATI.negozi||[]).find(x=>x.id===id); if(!n) return;
+  const v = volantiniDi(n)[k]; if(!v?.pagine?.length) return;
+  SF.pag = v.pagine; SF.i = 0;
+  $("#sf").style.setProperty("--c", NEG[id].colore);
+  $("#sfTit").innerHTML = `${esc(NEG[id].nome)}${v.nome&&!/^offerte valide/i.test(v.nome)?" · "+esc(v.nome):""}<small>${v.dal&&v.al?`dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:""}</small>`;
+  // le prime pagine subito, le altre quando ci si avvicina
+  $("#sfPag").innerHTML = v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}"><img ${i<3?`src="${esc(p)}"`:`data-src="${esc(p)}"`} decoding="async" alt="Pagina ${i+1}"></div>`).join("");
+  $("#sfPag").scrollLeft = 0;
+  $("#sf").classList.add("on"); document.body.style.overflow="hidden";
+  sfAggiorna(); precaricaPagine(v.pagine);
+  const h=$("#sfHint"); h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
+  history.pushState({sf:1}, "");
+}
+function chiudiSfogliatore(daHistory){
+  if(!$("#sf").classList.contains("on")) return;
+  $("#sf").classList.remove("on"); document.body.style.overflow=""; $("#sfPag").innerHTML="";
+  if(!daHistory && history.state?.sf) history.back();
+}
+function sfAggiorna(){
+  const el=$("#sfPag"), i=Math.round(el.scrollLeft/el.clientWidth); SF.i=i;
+  $("#sfNum").textContent = `${i+1} / ${SF.pag.length}`;
+  $("#sfPrev").disabled = i<=0; $("#sfNext").disabled = i>=SF.pag.length-1;
+  el.querySelectorAll(".sf-p").forEach(p=>{
+    const d=Math.abs(+p.dataset.i-i), img=p.firstElementChild;
+    if(d<=2 && img.dataset.src){ img.src=img.dataset.src; delete img.dataset.src; }
+    if(d>0 && p.classList.contains("zoom")) p.classList.remove("zoom");
+  });
+}
+function sfVai(d){ const el=$("#sfPag"); el.scrollTo({left:(SF.i+d)*el.clientWidth, behavior:"smooth"}); }
+let sfT; $("#sfPag").addEventListener("scroll",()=>{ clearTimeout(sfT); sfT=setTimeout(sfAggiorna,60); },{passive:true});
+$("#sfPrev").onclick=()=>sfVai(-1); $("#sfNext").onclick=()=>sfVai(1);
+$("#sfX").onclick=()=>chiudiSfogliatore();
+window.addEventListener("popstate",()=>chiudiSfogliatore(true));
+document.addEventListener("keydown",e=>{
+  if(!$("#sf").classList.contains("on")) return;
+  if(e.key==="ArrowRight") sfVai(1); else if(e.key==="ArrowLeft") sfVai(-1); else if(e.key==="Escape") chiudiSfogliatore();
+});
+// doppio tocco: ingrandisce la pagina nel punto toccato (e la rimette intera)
+let sfTap=0;
+function sfZoom(e, x, y){
+  const p=e.target.closest(".sf-p"); if(!p) return;
+  const img=p.firstElementChild, r=img.getBoundingClientRect();
+  const fx=Math.min(1,Math.max(0,(x-r.left)/r.width)), fy=Math.min(1,Math.max(0,(y-r.top)/r.height));
+  if(p.classList.toggle("zoom"))
+    requestAnimationFrame(()=>{ p.scrollLeft = fx*img.offsetWidth - p.clientWidth/2; p.scrollTop = fy*img.offsetHeight - p.clientHeight/2; });
+}
+$("#sfPag").addEventListener("touchend",e=>{
+  if(e.touches.length) return; const t=Date.now();
+  if(t-sfTap<300){ const c=e.changedTouches[0]; sfZoom(e,c.clientX,c.clientY); e.preventDefault(); sfTap=0; } else sfTap=t;
+});
+$("#sfPag").addEventListener("dblclick",e=>sfZoom(e,e.clientX,e.clientY));
+
+// scarica in anticipo le pagine nella cache del telefono, una alla volta senza rallentare l'app
+const giaPrecaricate = new Set();
+function precaricaPagine(lista){
+  const coda = lista.filter(p=>!giaPrecaricate.has(p)); coda.forEach(p=>giaPrecaricate.add(p));
+  (async()=>{ for(const p of coda){ try{ await fetch(p); }catch{} } })();
+}
+function precaricaVolantini(){
+  if(navigator.connection?.saveData) return;
+  const tutte = (DATI.negozi||[]).flatMap(n=>volantiniDi(n).filter(v=>!v.dal||v.dal<=oggi).flatMap(v=>v.pagine||[]));
+  const via = async ()=>{
+    precaricaPagine(tutte);
+    try{ // toglie dal telefono le pagine dei volantini scaduti
+      const tieni = new Set((DATI.negozi||[]).flatMap(n=>(n.volantini||[]).flatMap(v=>v.pagine||[])));
+      const c = await caches.open("foto");
+      for(const r of await c.keys()){ const u=new URL(r.url); const i=u.pathname.indexOf("data/vol/");
+        if(i>=0 && !tieni.has(u.pathname.slice(i))) c.delete(r); }
+    }catch{}
+  };
+  "requestIdleCallback" in window ? requestIdleCallback(via,{timeout:4000}) : setTimeout(via,2500);
+}
 
 function disegnaAvvisi(){
   const ko = (DATI.negozi||[]).filter(n=>n.ok===false);

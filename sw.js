@@ -1,5 +1,5 @@
-// Funzionamento offline: app sempre disponibile, offerte e foto in cache.
-const V = "spesa-v11";
+// Funzionamento offline: app sempre disponibile, offerte, foto e volantini in cache.
+const V = "spesa-v12";
 const SHELL = ["./", "index.html", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
@@ -10,8 +10,8 @@ self.addEventListener("fetch", e => {
   const r = e.request, u = new URL(r.url);
   if (r.method !== "GET") return;
   if (u.hostname.includes("firestore") || u.hostname.includes("googleapis.com") && u.pathname.includes("Listen")) return;
-  // foto prodotti: prima la cache
-  if (r.destination === "image" && u.origin !== location.origin || u.pathname.includes("/data/img/")) {
+  // foto prodotti e pagine dei volantini: prima la cache
+  if (r.destination === "image" && u.origin !== location.origin || u.pathname.includes("/data/img/") || u.pathname.includes("/data/vol/")) {
     e.respondWith(caches.open("foto").then(async c => {
       const hit = await c.match(r); if (hit) return hit;
       try { const res = await fetch(r); if (res.ok || res.type === "opaque") c.put(r, res.clone()); return res; }

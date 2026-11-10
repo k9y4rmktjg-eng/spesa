@@ -1,6 +1,6 @@
 {
  "zona": "Nonantola (MO) 41015",
- "aggiornato": "2026-11-09T13:40:35+00:00",
+ "aggiornato": "2026-11-10T07:39:54+00:00",
  "negozi": [
   {
    "id": "lidl",
@@ -10,7 +10,7 @@
    "negozio": "",
    "ok": true,
    "n": 183,
-   "aggiornato": "2026-11-09T13:40:35+00:00",
+   "aggiornato": "2026-11-10T07:39:54+00:00",
    "messaggio": "",
    "volantini": [
     {
@@ -72,7 +72,8 @@
       "data/vol/lidl/01a18843-17aa-7dc7-8eed-8d025829a739/50.jpg",
       "data/vol/lidl/01a18843-17aa-7dc7-8eed-8d025829a739/51.jpg",
       "data/vol/lidl/01a18843-17aa-7dc7-8eed-8d025829a739/52.jpg",
-      "data/vol/lidl/01a18843-17aa-7dc7-8eed-8d025829a739/53.jpg"
+      "data/vol/lidl/01a18843-17aa-7dc7-8eed-8d025829a739/53.jpg",
+      "data/vol/lidl/01a18843-17aa-7dc7-8eed-8d025829a739/54.jpg"
      ]
     },
     {
@@ -158,7 +159,7 @@
    "negozio": "Conad Via Provinciale Est 10, Nonantola",
    "ok": true,
    "n": 208,
-   "aggiornato": "2026-11-09T13:40:35+00:00",
+   "aggiornato": "2026-11-10T07:39:54+00:00",
    "messaggio": ""
   },
   {
@@ -169,7 +170,7 @@
    "negozio": "Coop Nonantola, Piazza Ilaria Alpi 15",
    "ok": true,
    "n": 847,
-   "aggiornato": "2026-11-09T13:40:35+00:00",
+   "aggiornato": "2026-11-10T07:39:54+00:00",
    "messaggio": "",
    "volantini": [
     {
@@ -421,23 +422,6 @@
    "nota": "Sottocosto lidl black days",
    "immagine": "https://www.lidl.it/assets/gcpc7f7a685735c4539b3a6a0efd5c24929.png",
    "link": "https://www.lidl.it/p/sant-anna-acqua-minerale-naturale/p11148987",
-   "dal": "2026-10-30",
-   "al": "2026-11-11"
-  },
-  {
-   "id": "lidl-6bd1c8a33558",
-   "negozio": "lidl",
-   "nome": "Carta da cucina Tuttofare",
-   "marca": "Scottex",
-   "dettaglio": "Alla confezione",
-   "unitario": "",
-   "prezzo": 4.89,
-   "prezzo_prima": null,
-   "sconto": "SOTTOCOSTO",
-   "categoria": "Casa e pulizia",
-   "nota": "Sottocosto lidl black days",
-   "immagine": "https://www.lidl.it/assets/gcpd88f45104436411e95b8072ee8f45eac.png",
-   "link": "https://www.lidl.it/p/scottex-carta-da-cucina-tuttofare/p11143405",
    "dal": "2026-10-30",
    "al": "2026-11-11"
   },
@@ -2006,6 +1990,23 @@
    "al": "2026-11-18"
   },
   {
+   "id": "lidl-5cadcb18255e",
+   "negozio": "lidl",
+   "nome": "Mele Gala Alto Adige/ del Trentino IGP",
+   "marca": "",
+   "dettaglio": "2 kg confezione",
+   "unitario": "1 kg = 1.10 €",
+   "prezzo": 2.19,
+   "prezzo_prima": 2.99,
+   "sconto": "-26%",
+   "categoria": "Non alimentari",
+   "nota": "Frutta e verdura",
+   "immagine": "https://www.lidl.it/assets/gcp51deda1dada245979eb12bf03c8414ff.png",
+   "link": "https://www.lidl.it/p/mele-gala-alto-adige-del-trentino-igp/p11150820",
+   "dal": "2026-11-06",
+   "al": "2026-11-18"
+  },
+  {
    "id": "lidl-aea623e6c5dc",
    "negozio": "lidl",
    "nome": "Limoni",
@@ -3026,7 +3027,7 @@
    "al": "2026-11-18"
   },
   {
-   "id": "lidl-73e4143a0127",
+   "id": "lidl-2c34404d449b",
    "negozio": "lidl",
    "nome": "Gioco di apprendimento in legno",
    "marca": "Lupilu",

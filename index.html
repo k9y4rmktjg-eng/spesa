@@ -587,10 +587,10 @@ $("#sheet").addEventListener("click", e=>{
 
 /* ---------- sfogliatore volantini (pagine già scaricate su GitHub) ---------- */
 const SF = {pag:[], fogli:[], i:0};
-function apriSfogliatore(id, k){
+function apriSfogliatore(id, k, riapri){
   const n = (DATI.negozi||[]).find(x=>x.id===id); if(!n) return;
   const v = volantiniDi(n)[k]; if(!v?.pagine?.length) return;
-  SF.pag = v.pagine; SF.i = 0;
+  SF.pag = v.pagine; SF.i = 0; SF.neg = id; SF.k = k;
   // su computer: copertina da sola, poi pagine a coppie come il volantino di carta
   SF.fogli = isDesk() ? [[0], ...Array.from({length:Math.ceil((v.pagine.length-1)/2)},(_,k)=>[1+2*k,2+2*k].filter(x=>x<v.pagine.length))]
                       : v.pagine.map((_,i)=>[i]);
@@ -605,8 +605,9 @@ function apriSfogliatore(id, k){
   $("#sf").classList.add("on"); document.body.style.overflow="hidden";
   $("#sfPag").scrollLeft = 0; // sempre dalla prima pagina (va fatto quando è già visibile)
   sfAggiorna(); precaricaPagine(v.pagine, true);
-  const h=$("#sfHint"); h.textContent = isDesk() ? "Doppio clic per ingrandire · frecce ← → per sfogliare" : "Doppio tocco per ingrandire"; h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
-  history.pushState({sf:1}, "");
+  const tocco = matchMedia("(pointer:coarse)").matches;
+  const h=$("#sfHint"); h.textContent = isDesk() && !tocco ? "Doppio clic per ingrandire · frecce ← → per sfogliare" : "Doppio tocco per ingrandire"; h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
+  if(!riapri) history.pushState({sf:1}, "");
 }
 function chiudiSfogliatore(daHistory){
   if(!$("#sf").classList.contains("on")) return;
@@ -937,14 +938,20 @@ $("#btnSalva").onclick = ()=>{
 
 /* ---------- navigazione ed eventi ---------- */
 const TITOLI = {off:"Offerte Volantini",lista:"La lista",imp:"Famiglia"};
-// versione larga solo su computer: schermo largo E mouse/trackpad (iPhone e iPad restano come prima)
-const MQ_DESK = matchMedia("(min-width:1100px) and (hover:hover) and (pointer:fine)");
+// versione larga: schermi da almeno 1100 punti (iMac, iPad grande in orizzontale). Gli iPhone non ci arrivano mai.
+const MQ_DESK = matchMedia("(min-width:1100px)");
 const isDesk = () => MQ_DESK.matches;
 let vistaCorrente = "off";
 function aggiornaDesk(){
   document.body.classList.toggle("desk", isDesk());
   if(isDesk() && vistaCorrente==="lista") vistaCorrente="off";
   if(window.vai) vai(vistaCorrente, true);
+  if($("#sf").classList.contains("on") && SF.neg){ // iPad ruotato col volantino aperto: lo reimpagina sulla stessa pagina
+    const pagina = (SF.fogli[SF.i]||[0])[0];
+    apriSfogliatore(SF.neg, SF.k, true);
+    const k = SF.fogli.findIndex(f=>f.includes(pagina));
+    requestAnimationFrame(()=>{ $("#sfPag").scrollLeft = Math.max(0,k)*$("#sfPag").clientWidth; sfAggiorna(); });
+  }
 }
 MQ_DESK.addEventListener?.("change", aggiornaDesk);
 new ResizeObserver(()=>document.body.style.setProperty("--hh", $("#hdr").offsetHeight+"px")).observe($("#hdr"));

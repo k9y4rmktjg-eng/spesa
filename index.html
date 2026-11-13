@@ -567,8 +567,9 @@ function apriSfogliatore(id, k){
   $("#sfTit").innerHTML = `${esc(NEG[id].nome)}${v.nome&&!/^offerte valide/i.test(v.nome)?" · "+esc(v.nome):""}<small>${v.dal&&v.al?`dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:""}</small>`;
   // le prime pagine subito, le altre quando ci si avvicina
   $("#sfPag").innerHTML = v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}"><img ${i<5?`src="${esc(p)}"`:`data-src="${esc(p)}"`} alt="Pagina ${i+1}"></div>`).join("");
-  $("#sfPag").scrollLeft = 0;
+  SF.t = null; clearTimeout(SF.tt);
   $("#sf").classList.add("on"); document.body.style.overflow="hidden";
+  $("#sfPag").scrollLeft = 0; // sempre dalla prima pagina (va fatto quando è già visibile)
   sfAggiorna(); precaricaPagine(v.pagine, true);
   const h=$("#sfHint"); h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
   history.pushState({sf:1}, "");

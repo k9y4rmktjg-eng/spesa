@@ -227,6 +227,34 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
 .toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translate(-50%,20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;transition:all .25s;z-index:60;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
+
+/* ---------- versione larga per computer (iMac): si attiva solo con schermo largo e mouse/trackpad ---------- */
+body.desk header{max-width:none;margin:0;padding-left:max(28px,calc((100% - 1480px)/2 + 28px));padding-right:max(28px,calc((100% - 1480px)/2 + 28px))}
+body.desk header > *{max-width:none}
+body.desk main{max-width:1480px;margin:0 auto;padding:10px 28px 110px;display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:28px;align-items:start}
+body.desk .chips{margin:0;padding-left:0;padding-right:0;flex-wrap:wrap;overflow:visible}
+body.desk #v-off{grid-column:1}
+body.desk #v-lista{grid-column:2;grid-row:1;display:block;position:sticky;top:calc(var(--hh,170px) + 10px);max-height:calc(100vh - var(--hh,170px) - 100px);overflow:auto;
+  background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:var(--shadow);animation:none}
+body.desk #v-lista::before{content:"🛒 La lista";display:block;font-family:Fraunces,Georgia,serif;font-weight:800;font-size:22px;margin:0 2px 10px}
+body.desk[data-v="imp"] #v-lista{display:none}
+body.desk #v-imp{grid-column:1/-1;max-width:760px;width:100%;margin:0 auto}
+body.desk .grid{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+body.desk .grid.elenco{grid-template-columns:repeat(auto-fill,minmax(380px,1fr))}
+body.desk .volantini{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+body.desk nav button[data-v="lista"]{display:none}
+body.desk nav{left:50%;right:auto;transform:translateX(-50%);bottom:14px;border:1px solid var(--line);border-radius:18px;padding:6px 18px;gap:20px;box-shadow:var(--shadow)}
+body.desk nav button{width:110px}
+/* sfogliatore a doppia pagina */
+body.desk .sf-p .sp{display:flex;align-items:center;justify-content:center;height:100%;width:100%}
+body.desk .sf-p .sp img{max-width:50%;max-height:100%;object-fit:contain;cursor:zoom-in}
+body.desk .sf-p .sp.uno img{max-width:100%}
+body.desk .sf-p.zoom .sp{width:190%;height:auto;align-items:flex-start}
+body.desk .sf-p.zoom .sp.uno{width:110%}
+body.desk .sf-p.zoom .sp img{max-width:none;max-height:none;width:50%;cursor:zoom-out}
+body.desk .sf-p.zoom .sp.uno img{width:100%}
+body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
+
 /* sfogliatore volantini */
 .sf{position:fixed;inset:0;z-index:70;background:#111;color:#fff;display:none;flex-direction:column}
 .sf.on{display:flex;animation:fade .2s ease}
@@ -558,20 +586,26 @@ $("#sheet").addEventListener("click", e=>{
 });
 
 /* ---------- sfogliatore volantini (pagine già scaricate su GitHub) ---------- */
-const SF = {pag:[], i:0};
+const SF = {pag:[], fogli:[], i:0};
 function apriSfogliatore(id, k){
   const n = (DATI.negozi||[]).find(x=>x.id===id); if(!n) return;
   const v = volantiniDi(n)[k]; if(!v?.pagine?.length) return;
   SF.pag = v.pagine; SF.i = 0;
+  // su computer: copertina da sola, poi pagine a coppie come il volantino di carta
+  SF.fogli = isDesk() ? [[0], ...Array.from({length:Math.ceil((v.pagine.length-1)/2)},(_,k)=>[1+2*k,2+2*k].filter(x=>x<v.pagine.length))]
+                      : v.pagine.map((_,i)=>[i]);
   $("#sf").style.setProperty("--c", NEG[id].colore);
   $("#sfTit").innerHTML = `${esc(NEG[id].nome)}${v.nome&&!/^offerte valide/i.test(v.nome)?" · "+esc(v.nome):""}<small>${v.dal&&v.al?`dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:""}</small>`;
   // le prime pagine subito, le altre quando ci si avvicina
-  $("#sfPag").innerHTML = v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}"><img ${i<5?`src="${esc(p)}"`:`data-src="${esc(p)}"`} alt="Pagina ${i+1}"></div>`).join("");
+  const im = (i, subito) => `<img ${subito?`src="${esc(v.pagine[i])}"`:`data-src="${esc(v.pagine[i])}"`} alt="Pagina ${i+1}">`;
+  $("#sfPag").innerHTML = isDesk()
+    ? SF.fogli.map((f,k)=>`<div class="sf-p" data-i="${k}"><div class="sp${f.length<2?" uno":""}">${f.map(i=>im(i,k<3)).join("")}</div></div>`).join("")
+    : v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}">${im(i,i<5)}</div>`).join("");
   SF.t = null; clearTimeout(SF.tt);
   $("#sf").classList.add("on"); document.body.style.overflow="hidden";
   $("#sfPag").scrollLeft = 0; // sempre dalla prima pagina (va fatto quando è già visibile)
   sfAggiorna(); precaricaPagine(v.pagine, true);
-  const h=$("#sfHint"); h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
+  const h=$("#sfHint"); h.textContent = isDesk() ? "Doppio clic per ingrandire · frecce ← → per sfogliare" : "Doppio tocco per ingrandire"; h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
   history.pushState({sf:1}, "");
 }
 function chiudiSfogliatore(daHistory){
@@ -579,19 +613,20 @@ function chiudiSfogliatore(daHistory){
   $("#sf").classList.remove("on"); document.body.style.overflow=""; $("#sfPag").innerHTML="";
   if(!daHistory && history.state?.sf) history.back();
 }
+const sfEtichetta = k => { const f=SF.fogli[k]||[k]; return `${f.map(x=>x+1).join("–")} / ${SF.pag.length}`; };
 function sfAggiorna(){
   const el=$("#sfPag"), i=Math.round(el.scrollLeft/el.clientWidth); SF.i=i;
-  $("#sfNum").textContent = `${i+1} / ${SF.pag.length}`;
-  $("#sfPrev").disabled = i<=0; $("#sfNext").disabled = i>=SF.pag.length-1;
+  $("#sfNum").textContent = sfEtichetta(i);
+  $("#sfPrev").disabled = i<=0; $("#sfNext").disabled = i>=SF.fogli.length-1;
   el.querySelectorAll(".sf-p").forEach(p=>{
-    const d=Math.abs(+p.dataset.i-i), img=p.firstElementChild;
-    if(d<=4 && img.dataset.src){ img.src=img.dataset.src; delete img.dataset.src; img.decode?.().catch(()=>{}); }
+    const d=Math.abs(+p.dataset.i-i);
+    if(d<=4) p.querySelectorAll("img[data-src]").forEach(img=>{ img.src=img.dataset.src; delete img.dataset.src; img.decode?.().catch(()=>{}); });
     if(d>0 && p.classList.contains("zoom")) p.classList.remove("zoom");
   });
 }
 function sfVai(d){ // anche con tocchi veloci sulle frecce va avanti di una pagina per tocco
-  const el=$("#sfPag"), t=Math.max(0, Math.min(SF.pag.length-1, (SF.t ?? SF.i)+d)); SF.t=t;
-  $("#sfNum").textContent = `${t+1} / ${SF.pag.length}`;
+  const el=$("#sfPag"), t=Math.max(0, Math.min(SF.fogli.length-1, (SF.t ?? SF.i)+d)); SF.t=t;
+  $("#sfNum").textContent = sfEtichetta(t);
   el.scrollTo({left:t*el.clientWidth, behavior:"smooth"});
   clearTimeout(SF.tt); SF.tt=setTimeout(()=>{ SF.t=null; if(Math.round(el.scrollLeft/el.clientWidth)!==t) el.scrollLeft=t*el.clientWidth; sfAggiorna(); }, 600);
 }
@@ -902,12 +937,26 @@ $("#btnSalva").onclick = ()=>{
 
 /* ---------- navigazione ed eventi ---------- */
 const TITOLI = {off:"Offerte Volantini",lista:"La lista",imp:"Famiglia"};
-window.vai = v => {
+// versione larga solo su computer: schermo largo E mouse/trackpad (iPhone e iPad restano come prima)
+const MQ_DESK = matchMedia("(min-width:1100px) and (hover:hover) and (pointer:fine)");
+const isDesk = () => MQ_DESK.matches;
+let vistaCorrente = "off";
+function aggiornaDesk(){
+  document.body.classList.toggle("desk", isDesk());
+  if(isDesk() && vistaCorrente==="lista") vistaCorrente="off";
+  if(window.vai) vai(vistaCorrente, true);
+}
+MQ_DESK.addEventListener?.("change", aggiornaDesk);
+new ResizeObserver(()=>document.body.style.setProperty("--hh", $("#hdr").offsetHeight+"px")).observe($("#hdr"));
+window.vai = (v, noScroll) => {
+  if(isDesk() && v==="lista") v="off";   // su computer la lista è sempre a fianco delle offerte
+  vistaCorrente = v; document.body.dataset.v = v;
   document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on",x.id==="v-"+v));
   document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   $("#titolo").textContent = TITOLI[v]; $("#hdrOfferte").style.display = v==="off"?"":"none";
-  if(v==="off") disegnaOfferte(); window.scrollTo({top:0});
+  if(v==="off") disegnaOfferte(); if(!noScroll) window.scrollTo({top:0});
 };
+document.body.classList.toggle("desk", isDesk());
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>vai(b.dataset.v));
 $("#chipNegozi").onclick = e=>{ const b=e.target.closest("[data-neg]"); if(!b) return; filtro.neg=b.dataset.neg; filtro.cat="tutte"; filtro.limite=40; disegnaChipNegozi(); disegnaOfferte(); };
 $("#chipCat").onclick = e=>{ const b=e.target.closest("[data-cat]"); if(!b) return; filtro.cat=b.dataset.cat; filtro.limite=40; disegnaChipNegozi(); disegnaOfferte(); };

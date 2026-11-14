@@ -215,7 +215,7 @@ nav .cnt{position:absolute;top:-2px;left:calc(50% + 6px);min-width:18px;height:1
 /* foglio dettaglio */
 .sheet-bg{position:fixed;inset:0;background:rgba(20,15,5,.45);z-index:50;opacity:0;pointer-events:none;transition:opacity .25s}
 .sheet-bg.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;background:var(--card);border-radius:24px 24px 0 0;padding:10px 18px calc(18px + var(--safe-b));transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.9,.2,1);max-height:92vh;overflow:auto;max-width:640px;margin:0 auto}
+.sheet{overscroll-behavior:contain;position:fixed;left:0;right:0;bottom:0;z-index:51;background:var(--card);border-radius:24px 24px 0 0;padding:10px 18px calc(18px + var(--safe-b));transform:translateY(105%);transition:transform .32s cubic-bezier(.2,.9,.2,1);max-height:92vh;overflow:auto;max-width:640px;margin:0 auto}
 .sheet.on{transform:none}
 .chiudi{position:absolute;top:12px;right:14px;width:34px;height:34px;border-radius:50%;background:var(--bg2);font-weight:700;color:var(--ink2);z-index:2}
 .grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
@@ -257,6 +257,29 @@ body.desk .sf-p.zoom .sp.uno img{width:100%}
 body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
 
 .det .dopo{color:var(--warn);font-weight:700}
+
+/* offerte del volantino aperto */
+.sf-bot{position:relative;gap:12px!important}
+.sf-offbtn{width:auto!important;padding:0 12px;font-size:14px!important;font-weight:700;background:#fff!important;color:#111!important;margin-left:4px;white-space:nowrap}
+.sf-offbtn span{color:var(--c,#111)}
+.sf-off{position:absolute;left:0;right:0;bottom:0;height:52%;background:var(--card);color:var(--ink);border-radius:20px 20px 0 0;display:flex;flex-direction:column;box-shadow:0 -10px 30px rgba(0,0,0,.35);z-index:3;animation:fade .2s ease}
+.sf-off[hidden]{display:none}
+.sf-offh{display:flex;gap:8px;padding:12px 12px 8px}
+.sf-offh input{flex:1;height:40px;border:1px solid var(--line);border-radius:12px;padding:0 12px;font-size:16px;background:var(--bg);color:var(--ink)}
+.sf-offh button{width:40px;height:40px;border:0;border-radius:50%;background:var(--bg2);color:var(--ink);font-size:15px}
+.sf-offl{flex:1;overflow:auto;overscroll-behavior:contain;padding:0 12px calc(12px + var(--safe-b))}
+.sf-o{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.sf-o:first-child{border-top:0}
+.sf-o img,.sf-o .em{flex:none;width:46px;height:46px;border-radius:10px;object-fit:contain;background:#fff;display:grid;place-items:center;font-size:24px}
+.sf-o .tx{flex:1;min-width:0;font-size:14px;line-height:1.25}
+.sf-o .tx small{display:block;color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sf-o .pr{font-weight:800;font-size:15px;white-space:nowrap;text-align:right}
+.sf-o .pr s{display:block;font-weight:400;color:var(--ink3);font-size:12px}
+.sf-o .sfadd{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:20px;font-weight:700}
+.sf-o .sfadd.in{background:var(--ink)}
+.sf.conoff .sf-off{position:relative;height:46%;flex:none}
+body.desk .sf.conoff .sf-off{position:absolute;left:auto;right:0;width:400px;height:auto;top:56px;bottom:0;border-radius:20px 0 0 20px}
+body.desk .sf.conoff .sf-pag,body.desk .sf.conoff .sf-bot{margin-right:400px}
 /* sfogliatore volantini */
 .sf{position:fixed;inset:0;z-index:70;background:#111;color:#fff;display:none;flex-direction:column}
 .sf.on{display:flex;animation:fade .2s ease}
@@ -384,7 +407,12 @@ body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
 <div class="sf" id="sf">
   <div class="sf-top"><b id="sfTit"></b><button id="sfX" aria-label="Chiudi volantino">✕</button></div>
   <div class="sf-pag" id="sfPag"></div>
-  <div class="sf-bot"><button id="sfPrev" aria-label="Pagina precedente">‹</button><span id="sfNum"></span><button id="sfNext" aria-label="Pagina successiva">›</button></div>
+  <div class="sf-bot"><button id="sfPrev" aria-label="Pagina precedente">‹</button><span id="sfNum"></span><button id="sfNext" aria-label="Pagina successiva">›</button>
+    <button class="sf-offbtn" id="sfOffBtn" hidden>🛒 Offerte <span id="sfOffN"></span></button></div>
+  <div class="sf-off" id="sfOff" hidden>
+    <div class="sf-offh"><input id="sfOffQ" type="search" placeholder="Cerca nel volantino…" autocomplete="off"><button id="sfOffX" aria-label="Chiudi elenco">✕</button></div>
+    <div class="sf-offl" id="sfOffL"></div>
+  </div>
   <div class="sf-hint" id="sfHint">Doppio tocco per ingrandire</div>
 </div>
 
@@ -425,7 +453,7 @@ const nomeUtente = () => LS.get("nome","");
 async function caricaOfferte(){
   try{
     const r = await fetch("data/offerte.json?t="+Date.now(),{cache:"no-store"});
-    DATI = await r.json(); LS.set("cacheOfferte",DATI);
+    DATI = await r.json(); const copia=DATI; setTimeout(()=>LS.set("cacheOfferte",copia),3000);
   }catch{ DATI = LS.get("cacheOfferte",DATI); }
   DATI.offerte = (DATI.offerte||[]).filter(o=>!o.al || o.al>=oggi);
   for(const k in cacheReparti) delete cacheReparti[k];
@@ -578,7 +606,7 @@ function apriVolantini(id){
         : `<a href="${esc(v.url)}" target="_blank" rel="noopener"><span>${tit}<small>${v.n?v.n+" offerte · ":""}si apre sul sito ${esc(NEG[id].nome)}</small></span><span>↗</span></a>`;
     }).join("")}</div>`;
   $("#shX").onclick = chiudiSheet;
-  $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on");
+  $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on"); bloccaSfondo(true);
 }
 $("#volantini").onclick = e=>{
   const s=e.target.closest("[data-sf]"); if(s){ const [id,i]=s.dataset.sf.split("|"); return apriSfogliatore(id,+i); }
@@ -595,6 +623,12 @@ function apriSfogliatore(id, k, riapri){
   const n = (DATI.negozi||[]).find(x=>x.id===id); if(!n) return;
   const v = volantiniDi(n)[k]; if(!v?.pagine?.length) return;
   SF.pag = v.pagine; SF.i = 0; SF.neg = id; SF.k = k;
+  // offerte di questo volantino: stesso negozio e date che si sovrappongono (se le offerte dicono il volantino, solo quelle)
+  let off = DATI.offerte.filter(o=>o.negozio===id && (!v.dal||!o.al||o.al>=v.dal) && (!v.al||!o.dal||o.dal<=v.al));
+  const nv = (v.nome||"").toLowerCase();
+  if(nv && !/^offerte valide/.test(nv)){ const st = off.filter(o=>(o.nota||"").toLowerCase().startsWith(nv)); if(st.length) off = st; }
+  SF.off = off;
+  $("#sfOffBtn").hidden = !off.length; $("#sfOffN").textContent = off.length || ""; $("#sfOff").hidden = true; $("#sf").classList.remove("conoff"); $("#sfOffQ").value = "";
   // su computer: copertina da sola, poi pagine a coppie come il volantino di carta
   SF.fogli = isDesk() ? [[0], ...Array.from({length:Math.ceil((v.pagine.length-1)/2)},(_,k)=>[1+2*k,2+2*k].filter(x=>x<v.pagine.length))]
                       : v.pagine.map((_,i)=>[i]);
@@ -644,8 +678,31 @@ $("#sfX").onclick=()=>chiudiSfogliatore();
 window.addEventListener("popstate",()=>chiudiSfogliatore(true));
 document.addEventListener("keydown",e=>{
   if(!$("#sf").classList.contains("on")) return;
-  if(e.key==="ArrowRight") sfVai(1); else if(e.key==="ArrowLeft") sfVai(-1); else if(e.key==="Escape") chiudiSfogliatore();
+  if(e.target.matches?.("input") && e.key!=="Escape") return;   // mentre si scrive nella ricerca non si sfoglia
+  if(e.key==="ArrowRight") sfVai(1); else if(e.key==="ArrowLeft") sfVai(-1); else if(e.key==="Escape"){ if(!$("#sfOff").hidden) mostraOffSf(false); else chiudiSfogliatore(); }
 });
+
+/* offerte del volantino aperto: si aggiungono alla lista senza chiudere il volantino */
+function disegnaOffSf(){
+  const q = norm($("#sfOffQ").value).trim();
+  const l = (SF.off||[]).filter(o=>!q || q.split(" ").every(p=>(o._n+o._d).includes(p))).slice(0,1000);
+  $("#sfOffL").innerHTML = l.length ? l.map(o=>{ const n=qtaInLista(o.id);
+    return `<div class="sf-o">${o.immagine?`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(o.immagine)}" alt="">`:`<span class="em">${emojiPer(o.nome)}</span>`}
+      <div class="tx">${esc(o.nome)}<small>${esc([o.marca,o.sconto,o.dettaglio].filter(Boolean).join(" · "))}</small></div>
+      <div class="pr">${euro(o.prezzo)}${o.prezzo_prima&&o.prezzo_prima>o.prezzo?`<s>${euro(o.prezzo_prima)}</s>`:""}</div>
+      <button class="sfadd ${n?"in":""}" data-sfadd="${esc(o.id)}" aria-label="Aggiungi alla lista">${n||"+"}</button></div>`; }).join("")
+    : `<p class="sub" style="text-align:center;padding:20px 0">Nessuna offerta trovata</p>`;
+}
+function mostraOffSf(si){
+  $("#sfOff").hidden = !si; $("#sf").classList.toggle("conoff", si); if(si) disegnaOffSf();
+  const el=$("#sfPag"), i=SF.i; requestAnimationFrame(()=>{ el.scrollLeft = i*el.clientWidth; sfAggiorna(); });  // resta sulla stessa pagina
+}
+$("#sfOffBtn").onclick = ()=>mostraOffSf($("#sfOff").hidden);
+$("#sfOffX").onclick = ()=>mostraOffSf(false);
+let tSfq; $("#sfOffQ").oninput = ()=>{ clearTimeout(tSfq); tSfq=setTimeout(disegnaOffSf,150); };
+$("#sfOffL").onclick = e=>{ const b=e.target.closest("[data-sfadd]"); if(!b) return;
+  const o = DATI.offerte.find(x=>x.id===b.dataset.sfadd); if(!o) return;
+  aggiungiOfferta(o); b.classList.add("in"); b.textContent = (parseInt(b.textContent)||0)+1; };
 // doppio tocco: ingrandisce la pagina nel punto toccato (e la rimette intera)
 let sfTap=0;
 function sfZoom(e, x, y){
@@ -675,7 +732,7 @@ function precaricaPagine(lista, urgente){
 }
 function precaricaVolantini(){
   if(navigator.connection?.saveData) return;
-  const tutte = (DATI.negozi||[]).flatMap(n=>volantiniDi(n).filter(v=>!v.dal||v.dal<=oggi).flatMap(v=>v.pagine||[]));
+  const tutte = (DATI.negozi||[]).flatMap(n=>volantiniDi(n).filter(v=>!v.dal||v.dal<=oggi).flatMap(v=>(v.pagine||[]).slice(0,4)));
   const via = async ()=>{
     precaricaPagine(tutte);
     try{ // toglie dal telefono le pagine dei volantini scaduti
@@ -714,9 +771,12 @@ function apriDettaglio(id){
     const parole = prompt("Ti mostro questo prodotto ogni volta che è in offerta.\nParole da cercare (puoi modificarle):", paroleAuto(o));
     if(parole && parole.trim()){ aggiungiPreferito(parole); chiudiSheet(); }
   };
-  $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on");
+  $("#sheetBg").classList.add("on"); $("#sheet").classList.add("on"); bloccaSfondo(true);
 }
-function chiudiSheet(){ $("#sheetBg").classList.remove("on"); $("#sheet").classList.remove("on"); }
+function chiudiSheet(){ $("#sheetBg").classList.remove("on"); $("#sheet").classList.remove("on"); bloccaSfondo(false); }
+// mentre è aperto un foglio, la pagina dietro resta ferma
+function bloccaSfondo(si){ document.documentElement.style.overflow = si ? "hidden" : ""; document.body.style.overflow = si ? "hidden" : ""; }
+$("#sheetBg").addEventListener("touchmove",e=>e.preventDefault(),{passive:false});
 $("#sheetBg").onclick = chiudiSheet;
 let y0=null; $("#sheet").addEventListener("touchstart",e=>{y0=e.touches[0].clientY},{passive:true});
 $("#sheet").addEventListener("touchend",e=>{ if(y0!=null && e.changedTouches[0].clientY-y0>90 && $("#sheet").scrollTop<=0) chiudiSheet(); y0=null; });

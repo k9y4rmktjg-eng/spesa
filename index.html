@@ -180,7 +180,7 @@ main{padding:6px 16px 20px}
 .t1{font-weight:600;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .t2{color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .t2 .scade{color:var(--warn);font-weight:700}
-.rep{padding:8px 12px 4px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);border-top:1px solid var(--line)}
+.rep{padding:10px 12px 4px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);border-top:1px solid var(--line)}
 .items .rep:first-child{border-top:0}
 .qty{display:flex;align-items:center;background:var(--bg);border-radius:99px;flex:none}
 .qty button{width:30px;height:30px;display:grid;place-items:center;font-weight:700;color:var(--ink2)}
@@ -478,6 +478,11 @@ body.desk .best-l{margin:0;padding-left:2px}
 <script type="module">
 const CFG = window.SPESA_CONFIG || {};
 const $ = s => document.querySelector(s);
+// le 17 categorie dello scraper raggruppate in 11 macro-reparti
+const MACRO = {"Salumi e formaggi":"Freschi","Latte, yogurt e uova":"Freschi","Altri freschi":"Freschi",
+  "Pasta, riso e dispensa":"Dispensa","Pane e forno":"Dispensa","Caffè, tè e colazione":"Colazione e dolci","Dolci e snack":"Colazione e dolci",
+  "Casa e pulizia":"Casa e altro","Non alimentari":"Casa e altro","Cura della persona":"Persona e bimbi","Infanzia":"Persona e bimbi"};
+const macro = c => MACRO[c] || c || "Altro";
 const NEG = {
   lidl:{nome:"Lidl",colore:"#0050AA",sigla:"L"}, conad:{nome:"Conad",colore:"#E30613",sigla:"C"},
   coop:{nome:"Coop",colore:"#D3001C",sigla:"Co"}, carrefour:{nome:"Carrefour Casalecchio",breve:"Carrefour",colore:"#1A8BD6",sigla:"Cr"},
@@ -519,6 +524,7 @@ async function caricaOfferte(){
   for(const o of DATI.offerte){
     o._pct = o.prezzo_prima && o.prezzo_prima>o.prezzo ? Math.round((1-o.prezzo/o.prezzo_prima)*100)
       : (parseInt((o.sconto||"").replace(/[^\d]/g,""))||0);
+    o.categoria = macro(o.categoria);
     o._n = norm(o.nome+" "+(o.marca||""));      // nome e marca: dove si cerca davvero
     o._d = norm(o.dettaglio||"");                // descrizione: solo come risultati secondari
   }
@@ -538,9 +544,9 @@ function disegnaChipNegozi(){
   const cats = {}; base.forEach(o=>{const c=o.categoria||"Altro"; cats[c]=(cats[c]||0)+1;});
   if(filtro.cat!=="tutte" && !cats[filtro.cat] && !filtro.q) filtro.cat="tutte";
   if(filtro.cat!=="tutte" && !cats[filtro.cat]) cats[filtro.cat]=0;
-  const top = Object.entries(cats).sort((a,b)=>(a[0]==="Altro")-(b[0]==="Altro") || b[1]-a[1]);
+  const top = Object.entries(cats).sort((a,b)=>REPARTI.indexOf(a[0])-REPARTI.indexOf(b[0]));
   $("#chipCat").innerHTML = top.length ? [`<button class="chip ${filtro.cat==="tutte"?"on":""}" data-cat="tutte">Tutte le categorie</button>`,
-    ...top.map(([c,n])=>`<button class="chip ${filtro.cat===c?"on":""}" data-cat="${esc(c)}">${esc(c)}<span class="n">${n}</span></button>`)].join("") : "";
+    ...top.map(([c,n])=>`<button class="chip ${filtro.cat===c?"on":""}" data-cat="${esc(c)}">${esc(conIcona(c))}<span class="n">${n}</span></button>`)].join("") : "";
 }
 
 /* ---------- ricerca ---------- */
@@ -889,7 +895,7 @@ function disegnaLista(){
     const sub = vv.filter(v=>!v.fatto).reduce((s,v)=>s+(v.prezzo||0)*(v.qta||1),0);
     const rs = vv.filter(v=>!v.fatto).reduce((s,v)=>s+risparmio(v),0);
     return `<div class="grp"><div class="grph"><span>${logo(k)}${NEG[k].nome}</span><span>${rs>=0.01?`<span class="risp">risparmi ${euro(rs)}</span> · `:""}${sub?euro(sub):""}</span></div><div class="items">${vv.map(v=>{
-      const r = v.fatto ? "Presi" : repartoDi(v), titolo = r!==ultimo ? `<div class="rep">${esc(r)}</div>` : ""; ultimo = r;
+      const r = v.fatto ? "Presi" : repartoDi(v), titolo = r!==ultimo ? `<div class="rep">${esc(v.fatto?"✓ Presi":conIcona(r))}</div>` : ""; ultimo = r;
       return titolo+`
       <div class="it ${v.fatto?"done":""}" data-it="${v.id}">
         <button class="chk" data-chk="${v.id}" aria-label="Preso">${v.fatto?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>`:""}</button>
@@ -904,13 +910,15 @@ function disegnaLista(){
 function aggiornaTutto(){ disegnaLista(); if($("#v-off").classList.contains("on")) disegnaOfferte(); }
 
 /* ---------- reparti e scadenze ---------- */
-// ordine dei reparti come si incontrano di solito nel supermercato
-const REPARTI = ["Frutta e verdura","Pane e forno","Carne e pesce","Salumi e formaggi","Latte, yogurt e uova","Altri freschi",
-  "Pasta, riso e dispensa","Caffè, tè e colazione","Dolci e snack","Bevande","Surgelati","Casa e pulizia","Cura della persona",
-  "Infanzia","Animali","Non alimentari","Altro"];
+// macro-reparti, nell'ordine in cui si incontrano di solito nel supermercato
+const REPARTI = ["Frutta e verdura","Carne e pesce","Freschi","Dispensa","Colazione e dolci","Bevande","Surgelati",
+  "Casa e altro","Persona e bimbi","Animali","Altro"];
+const ICONA = {"Frutta e verdura":"🥦","Carne e pesce":"🥩","Freschi":"🧀","Dispensa":"🍝","Colazione e dolci":"🍪","Bevande":"🥤",
+  "Surgelati":"❄️","Casa e altro":"🧽","Persona e bimbi":"🧴","Animali":"🐾","Altro":"📦"};
+const conIcona = c => (ICONA[c]||"📦")+" "+c;
 const cacheReparti = {};
 function repartoDi(v){
-  if(v.categoria && REPARTI.includes(v.categoria)) return v.categoria;
+  if(v.categoria && REPARTI.includes(macro(v.categoria))) return macro(v.categoria);
   if(v.offertaId){ const o=(DATI.offerte||[]).find(x=>x.id===v.offertaId); if(o&&o.categoria) return REPARTI.includes(o.categoria)?o.categoria:"Altro"; }
   // prodotto scritto a mano: la categoria più frequente tra le offerte con lo stesso nome (es. "latte")
   const chiave = norm(v.nome);
@@ -1175,7 +1183,7 @@ caricaOfferte(); collega();
 if(!nomeUtente() && !LS.get("pin","")) setTimeout(()=>toast("Benvenuto! Imposta nome e codice in Famiglia"),900);
 
 /* ===== le migliori di oggi (prova) ===== */
-const NOFOOD=new Set(["Non alimentari","Casa e pulizia","Cura della persona","Animali","Infanzia","Altro"]);
+const NOFOOD=new Set(["Casa e altro","Persona e bimbi","Animali","Altro"]);
 function disegnaTop(){
   let box = document.getElementById("top");
   if(!box){ box = document.createElement("section"); box.id="top"; box.className="best"; $("#volantini").after(box); }

@@ -860,7 +860,7 @@ def main():
     pulisci_volantini(stati)
     DATA.mkdir(exist_ok=True)
     OUT.write_text(json.dumps({"zona": CFG["zona"], "aggiornato": ora, "negozi": stati,
-                               "offerte": risultato}, ensure_ascii=False, indent=1), encoding="utf-8")
+                               "offerte": risultato}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     log(f"Scritte {len(risultato)} offerte in {OUT}")
     # esce con errore solo se TUTTE le catene sono fallite (così GitHub ti avvisa)
     if not any(s.get("ok") for s in stati if not solo or s.get("id") in solo):

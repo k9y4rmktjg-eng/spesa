@@ -289,6 +289,8 @@ body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
 body.desk .sf-maniglia{display:none}
 body.desk .sf.conoff .sf-off{position:absolute;left:auto;right:0;width:400px;height:auto;top:56px;bottom:0;border-radius:20px 0 0 20px}
 body.desk .sf.conoff .sf-pag,body.desk .sf.conoff .sf-bot{margin-right:400px}
+.dove-lbl{margin:12px 2px 0;font-size:13px;font-weight:700;color:var(--ink2)}
+.dove-lbl span{font-weight:400;color:var(--ink3)}
 /* sfogliatore volantini */
 .sf{position:fixed;inset:0;z-index:70;background:#111;color:#fff;display:none;flex-direction:column}
 .sf.on{display:flex;animation:fade .2s ease}
@@ -355,7 +357,8 @@ body.desk .sf.conoff .sf-pag,body.desk .sf.conoff .sf-bot{margin-right:400px}
         <input id="nuovoP" class="p" inputmode="decimal" placeholder="€">
         <button class="btn" id="btnAdd" aria-label="Aggiungi">+</button>
       </div>
-      <div class="chips small" id="chipDove" style="padding-bottom:0"></div>
+      <div class="dove-lbl">Dove lo compri? <span>(per i prodotti aggiunti a mano)</span></div>
+      <div class="chips small" id="chipDove" style="padding-bottom:0;padding-top:6px"></div>
     </div>
     <div class="totale"><span class="sub" id="contaLista"></span><span class="serif" id="totLista"></span></div>
     <div class="totale" id="rispBox" style="margin-top:-4px" hidden><span class="sub">Risparmio sul prezzo pieno</span><span class="risp" id="rispLista"></span></div>

@@ -1,5 +1,5 @@
 // Funzionamento offline: app sempre disponibile, offerte, foto e volantini in cache.
-const V = "spesa-v12";
+const V = "spesa-v13";
 const SHELL = ["./", "index.html", "config.js", "manifest.webmanifest", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(V).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
@@ -21,7 +21,8 @@ self.addEventListener("fetch", e => {
   }
   // tutto il resto dell'app: prima la rete, poi la cache
   if (u.origin === location.origin || u.hostname.includes("gstatic.com") || u.hostname.includes("fonts.")) {
-    e.respondWith(fetch(r).then(res => {
+    // "no-cache": chiede sempre a GitHub se c'è una versione nuova (niente copie vecchie fino a 10 minuti)
+    e.respondWith(fetch(r, { cache: "no-cache" }).then(res => {
       if (res.ok) { const cl = res.clone(); caches.open(V).then(c => c.put(r.url.split("?")[0], cl)); }
       return res;
     }).catch(() => caches.match(r.url.split("?")[0]).then(x => x || caches.match("index.html"))));

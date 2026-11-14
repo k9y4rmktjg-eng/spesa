@@ -1,6 +1,6 @@
 {
  "zona": "Nonantola (MO) 41015",
- "aggiornato": "2026-11-12T06:07:07+00:00",
+ "aggiornato": "2026-11-14T09:42:17+00:00",
  "negozi": [
   {
    "id": "lidl",
@@ -10,7 +10,7 @@
    "negozio": "",
    "ok": true,
    "n": 111,
-   "aggiornato": "2026-11-12T06:07:07+00:00",
+   "aggiornato": "2026-11-14T09:42:17+00:00",
    "messaggio": "",
    "volantini": [
     {
@@ -86,7 +86,8 @@
       "data/vol/lidl/01a1b151-5d16-7df1-9139-2d4ee4b79bbf/64.jpg",
       "data/vol/lidl/01a1b151-5d16-7df1-9139-2d4ee4b79bbf/65.jpg",
       "data/vol/lidl/01a1b151-5d16-7df1-9139-2d4ee4b79bbf/66.jpg",
-      "data/vol/lidl/01a1b151-5d16-7df1-9139-2d4ee4b79bbf/67.jpg"
+      "data/vol/lidl/01a1b151-5d16-7df1-9139-2d4ee4b79bbf/67.jpg",
+      "data/vol/lidl/01a1b151-5d16-7df1-9139-2d4ee4b79bbf/68.jpg"
      ]
     }
    ]
@@ -99,7 +100,7 @@
    "negozio": "Conad Via Provinciale Est 10, Nonantola",
    "ok": true,
    "n": 414,
-   "aggiornato": "2026-11-12T06:07:07+00:00",
+   "aggiornato": "2026-11-14T09:42:17+00:00",
    "messaggio": ""
   },
   {
@@ -110,7 +111,7 @@
    "negozio": "Coop Nonantola, Piazza Ilaria Alpi 15",
    "ok": true,
    "n": 921,
-   "aggiornato": "2026-11-12T06:07:07+00:00",
+   "aggiornato": "2026-11-14T09:42:17+00:00",
    "messaggio": "",
    "volantini": [
     {
@@ -156,6 +157,167 @@
      "dal": "2026-11-12",
      "al": "2026-12-02",
      "n": 0
+    }
+   ]
+  },
+  {
+   "id": "carrefour",
+   "nome": "Carrefour Casalecchio",
+   "colore": "#1A8BD6",
+   "volantino": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729",
+   "negozio": "Carrefour Iper, Shopville Gran Reno, Via Marilyn Monroe 2, Casalecchio di Reno",
+   "ok": false,
+   "n": 0,
+   "aggiornato": null,
+   "messaggio": "il sito Carrefour ha bloccato lo scaricamento automatico (controllo anti-robot)",
+   "volantini": [
+    {
+     "url": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729/-volantino-ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9-0729-sottocosto-carrefour-iper-57079-carrefour-iper/57079",
+     "nome": "Sottocosto",
+     "dal": "2026-11-06",
+     "al": "2026-11-15",
+     "n": 471,
+     "pagine": [
+      "data/vol/carrefour/57079/01.jpg",
+      "data/vol/carrefour/57079/02.jpg",
+      "data/vol/carrefour/57079/03.jpg",
+      "data/vol/carrefour/57079/04.jpg",
+      "data/vol/carrefour/57079/05.jpg",
+      "data/vol/carrefour/57079/06.jpg",
+      "data/vol/carrefour/57079/07.jpg",
+      "data/vol/carrefour/57079/08.jpg",
+      "data/vol/carrefour/57079/09.jpg",
+      "data/vol/carrefour/57079/10.jpg",
+      "data/vol/carrefour/57079/11.jpg",
+      "data/vol/carrefour/57079/12.jpg",
+      "data/vol/carrefour/57079/13.jpg",
+      "data/vol/carrefour/57079/14.jpg",
+      "data/vol/carrefour/57079/15.jpg",
+      "data/vol/carrefour/57079/16.jpg",
+      "data/vol/carrefour/57079/17.jpg",
+      "data/vol/carrefour/57079/18.jpg",
+      "data/vol/carrefour/57079/19.jpg",
+      "data/vol/carrefour/57079/20.jpg",
+      "data/vol/carrefour/57079/21.jpg",
+      "data/vol/carrefour/57079/22.jpg",
+      "data/vol/carrefour/57079/23.jpg",
+      "data/vol/carrefour/57079/24.jpg",
+      "data/vol/carrefour/57079/25.jpg",
+      "data/vol/carrefour/57079/26.jpg",
+      "data/vol/carrefour/57079/27.jpg",
+      "data/vol/carrefour/57079/28.jpg",
+      "data/vol/carrefour/57079/29.jpg",
+      "data/vol/carrefour/57079/30.jpg",
+      "data/vol/carrefour/57079/31.jpg",
+      "data/vol/carrefour/57079/32.jpg",
+      "data/vol/carrefour/57079/33.jpg",
+      "data/vol/carrefour/57079/34.jpg",
+      "data/vol/carrefour/57079/35.jpg",
+      "data/vol/carrefour/57079/36.jpg",
+      "data/vol/carrefour/57079/37.jpg",
+      "data/vol/carrefour/57079/38.jpg",
+      "data/vol/carrefour/57079/39.jpg",
+      "data/vol/carrefour/57079/40.jpg",
+      "data/vol/carrefour/57079/41.jpg",
+      "data/vol/carrefour/57079/42.jpg"
+     ]
+    },
+    {
+     "url": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729/-volantino-ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9-0729-prezzi-da-black-friday-carrefour-iper-57096-carrefour-iper/57096",
+     "nome": "Prezzi da black friday",
+     "dal": "2026-11-17",
+     "al": "2026-11-26",
+     "n": 499,
+     "pagine": [
+      "data/vol/carrefour/57096/01.jpg",
+      "data/vol/carrefour/57096/02.jpg",
+      "data/vol/carrefour/57096/03.jpg",
+      "data/vol/carrefour/57096/04.jpg",
+      "data/vol/carrefour/57096/05.jpg",
+      "data/vol/carrefour/57096/06.jpg",
+      "data/vol/carrefour/57096/07.jpg",
+      "data/vol/carrefour/57096/08.jpg",
+      "data/vol/carrefour/57096/09.jpg",
+      "data/vol/carrefour/57096/10.jpg",
+      "data/vol/carrefour/57096/11.jpg",
+      "data/vol/carrefour/57096/12.jpg",
+      "data/vol/carrefour/57096/13.jpg",
+      "data/vol/carrefour/57096/14.jpg",
+      "data/vol/carrefour/57096/15.jpg",
+      "data/vol/carrefour/57096/16.jpg",
+      "data/vol/carrefour/57096/17.jpg",
+      "data/vol/carrefour/57096/18.jpg",
+      "data/vol/carrefour/57096/19.jpg",
+      "data/vol/carrefour/57096/20.jpg",
+      "data/vol/carrefour/57096/21.jpg",
+      "data/vol/carrefour/57096/22.jpg",
+      "data/vol/carrefour/57096/23.jpg",
+      "data/vol/carrefour/57096/24.jpg",
+      "data/vol/carrefour/57096/25.jpg",
+      "data/vol/carrefour/57096/26.jpg",
+      "data/vol/carrefour/57096/27.jpg",
+      "data/vol/carrefour/57096/28.jpg",
+      "data/vol/carrefour/57096/29.jpg",
+      "data/vol/carrefour/57096/30.jpg",
+      "data/vol/carrefour/57096/31.jpg",
+      "data/vol/carrefour/57096/32.jpg",
+      "data/vol/carrefour/57096/33.jpg",
+      "data/vol/carrefour/57096/34.jpg",
+      "data/vol/carrefour/57096/35.jpg",
+      "data/vol/carrefour/57096/36.jpg",
+      "data/vol/carrefour/57096/37.jpg",
+      "data/vol/carrefour/57096/38.jpg",
+      "data/vol/carrefour/57096/39.jpg",
+      "data/vol/carrefour/57096/40.jpg",
+      "data/vol/carrefour/57096/41.jpg",
+      "data/vol/carrefour/57096/42.jpg",
+      "data/vol/carrefour/57096/43.jpg",
+      "data/vol/carrefour/57096/44.jpg"
+     ]
+    },
+    {
+     "url": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729/-volantino-ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9-0729-speciale-aia-carrefour-iper-56972-carrefour-iper/56972",
+     "nome": "Speciale Aia",
+     "dal": "2026-09-29",
+     "al": "2026-11-15",
+     "n": 0,
+     "pagine": [
+      "data/vol/carrefour/56972/01.jpg",
+      "data/vol/carrefour/56972/02.jpg"
+     ]
+    },
+    {
+     "url": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729/-volantino-ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9-0729-speciale-detersivi-carrefour-iper-57062-carrefour-iper/57062",
+     "nome": "Speciale detersivi",
+     "dal": "2026-11-17",
+     "al": "2026-11-30",
+     "n": 0,
+     "pagine": [
+      "data/vol/carrefour/57062/01.jpg",
+      "data/vol/carrefour/57062/02.jpg"
+     ]
+    },
+    {
+     "url": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729/-volantino-ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9-0729-speciale-le-stagioni-d-italia-carrefour-iper-57063-carrefour-iper/57063",
+     "nome": "Speciale le stagioni d'Italia",
+     "dal": "2026-11-17",
+     "al": "2026-11-30",
+     "n": 0,
+     "pagine": [
+      "data/vol/carrefour/57063/01.jpg",
+      "data/vol/carrefour/57063/02.jpg"
+     ]
+    },
+    {
+     "url": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729/-volantino-ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9-0729-speciale-casa-carrefour-iper-57064-carrefour-iper/57064",
+     "nome": "Speciale casa",
+     "dal": "2026-11-06",
+     "al": "2026-11-15",
+     "n": 0,
+     "pagine": [
+      "data/vol/carrefour/57064/01.jpg",
+      "data/vol/carrefour/57064/02.jpg"
+     ]
     }
    ]
   }

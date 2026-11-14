@@ -636,11 +636,25 @@ def _carrefour_dati(ctx, n):
         return _CARREFOUR[n["id"]]
     page = ctx.new_page()
     try:
-        page.goto(n["volantino"], wait_until="domcontentloaded", timeout=90000)
-        for _ in range(20):  # se compare il controllo anti-robot, aspetta che si risolva da solo
-            if "volantino" in page.title().lower():
-                break
-            page.wait_for_timeout(1500)
+        # il primo accesso a volte viene fermato dal controllo anti-robot, i successivi passano:
+        # si riprova fino a 4 volte ricaricando la pagina
+        for tentativo in range(4):
+            try:
+                page.goto(n["volantino"], wait_until="domcontentloaded", timeout=90000)
+            except Exception as e:
+                log(f"   tentativo {tentativo + 1}: {e}")
+            for _ in range(20):  # aspetta fino a 30 secondi che il controllo si risolva da solo
+                try:
+                    if "volantino" in page.title().lower():
+                        break
+                except Exception:
+                    pass
+                page.wait_for_timeout(1500)
+            else:
+                log(f"   tentativo {tentativo + 1}: pagina bloccata, riprovo")
+                page.wait_for_timeout(5000)
+                continue
+            break
         else:
             raise RuntimeError("il sito Carrefour ha bloccato lo scaricamento automatico (controllo anti-robot)")
         page.wait_for_timeout(1500)

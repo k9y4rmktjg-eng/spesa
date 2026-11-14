@@ -7,7 +7,7 @@ Gira da solo su GitHub Actions ogni settimana. Se una catena fallisce,
 le sue offerte precedenti restano e l'app mostra un avviso.
 """
 import hashlib, io, json, re, shutil, sys, time, traceback, unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -803,6 +803,45 @@ FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad, "carrefour": carrefour}
 VOLANTINI = {"lidl": lidl_volantini, "coop": coop_volantini, "carrefour": carrefour_volantini}   # link e pagine dei volantini
 
 
+# ---------- storico prezzi ----------
+# data/storico.json: per ogni prodotto (negozio + nome + marca + formato) le coppie [data, prezzo, prezzo_pieno].
+# Serve all'app per dire "prezzo più basso degli ultimi mesi". Se qualcosa va storto non blocca nulla.
+STORICO = DATA / "storico.json"
+STORICO_GIORNI = 400
+
+
+def _chiave_storico(o):
+    t = " ".join(str(o.get(k) or "") for k in ("nome", "marca", "dettaglio")).lower()
+    t = unicodedata.normalize("NFKD", t).encode("ascii", "ignore").decode()
+    return o["negozio"] + "|" + re.sub(r"[^a-z0-9]+", " ", t).strip()
+
+
+def aggiorna_storico(offerte, oggi):
+    try:
+        st = json.loads(STORICO.read_text(encoding="utf-8")) if STORICO.exists() else {}
+    except Exception:
+        st = {}
+    nuovi = 0
+    for o in offerte:
+        if not isinstance(o.get("prezzo"), (int, float)):
+            continue
+        k = _chiave_storico(o)
+        voce = st.setdefault(k, {"n": o.get("nome", ""), "p": []})
+        quando = o.get("dal") or oggi
+        riga = [quando, o["prezzo"]] + ([o["prezzo_prima"]] if o.get("prezzo_prima") else [])
+        if not any(r[0] == quando and r[1] == o["prezzo"] for r in voce["p"]):
+            voce["p"].append(riga)
+            voce["p"].sort()
+            nuovi += 1
+    limite = (datetime.now(timezone.utc) - timedelta(days=STORICO_GIORNI)).date().isoformat()
+    for k in list(st):
+        st[k]["p"] = [r for r in st[k]["p"] if r[0] >= limite]
+        if not st[k]["p"]:
+            del st[k]
+    STORICO.write_text(json.dumps(st, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    log(f"Storico prezzi: {len(st)} prodotti, {nuovi} prezzi nuovi")
+
+
 def main():
     precedente = {}
     if OUT.exists():
@@ -862,6 +901,10 @@ def main():
     OUT.write_text(json.dumps({"zona": CFG["zona"], "aggiornato": ora, "negozi": stati,
                                "offerte": risultato}, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     log(f"Scritte {len(risultato)} offerte in {OUT}")
+    try:
+        aggiorna_storico(risultato, ora[:10])
+    except Exception as e:
+        log(f"  storico prezzi non aggiornato: {e}")
     # esce con errore solo se TUTTE le catene sono fallite (così GitHub ti avvisa)
     if not any(s.get("ok") for s in stati if not solo or s.get("id") in solo):
         sys.exit(1)

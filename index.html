@@ -256,6 +256,7 @@ body.desk .sf-p.zoom .sp img{max-width:none;max-height:none;width:50%;cursor:zoo
 body.desk .sf-p.zoom .sp.uno img{width:100%}
 body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
 
+.det .dopo{color:var(--warn);font-weight:700}
 /* sfogliatore volantini */
 .sf{position:fixed;inset:0;z-index:70;background:#111;color:#fff;display:none;flex-direction:column}
 .sf.on{display:flex;animation:fade .2s ease}
@@ -504,7 +505,7 @@ function cardHTML(o){
     <div class="info"><div class="nome">${esc(o.nome)}</div>
       <div class="det">${esc([o.marca,o.dettaglio].filter(Boolean).join(" · ")||o.nota||"")}</div>
       <div class="prezzi"><span class="prezzo">${euro(o.prezzo)}</span>${o.prezzo_prima?`<span class="prima">${euro(o.prezzo_prima)}</span>`:""}</div>
-      <div class="det">${o.al?"fino al "+dataIt(o.al):""}</div>
+      <div class="det">${o.dal&&o.dal>oggi?`<b class="dopo">dal ${dataIt(o.dal)}</b>${o.al?" al "+dataIt(o.al):""}`:o.al?"fino al "+dataIt(o.al):""}</div>
     </div>
     <button class="add ${q?"in":""}" data-add="${esc(o.id)}" aria-label="Aggiungi alla lista">${q?q:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`}</button>
   </article>`;

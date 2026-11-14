@@ -478,7 +478,7 @@ async function caricaOfferte(){
   }
   segnaPreferiti(); disegnaChipNegozi(); disegnaOfferte(); disegnaVolantini(); precaricaVolantini(); disegnaAvvisi(); disegnaImpNegozi(); aggiornaPreferiti(); disegnaLista();
   const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
-  $("#sottotitolo").textContent = (CFG.zona||"Nonantola") + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
+  $("#sottotitolo").textContent = "Nonantola · Casalecchio" + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
 }
 
 function logo(id,size){ const n=NEG[id]||NEG.altro; return `<span class="logo" style="background:${n.colore}${size?`;width:${size}px;height:${size}px`:""}">${n.sigla}</span>`; }

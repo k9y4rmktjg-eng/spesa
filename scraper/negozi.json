@@ -18,7 +18,12 @@
       "negozio": "Conad Via Provinciale Est 10, Nonantola",
       "pagina_negozio": "https://www.conad.it/ricerca-negozi/conad-via-provinciale-est-10-41015-nonantola--010318",
       "volantino": "https://www.conad.it/ricerca-negozi/conad-via-provinciale-est-10-41015-nonantola--010318",
-      "escludi_titoli": ["CATALOGO", "PREMIO", "CESTE", "VIAGGI"]
+      "escludi_titoli": [
+        "CATALOGO",
+        "PREMIO",
+        "CESTE",
+        "VIAGGI"
+      ]
     },
     {
       "id": "coop",
@@ -29,6 +34,15 @@
       "codice_negozio": "9650",
       "pagina_negozio": "https://www.coopalleanza3-0.it/fare-spesa/elenco-negozi/dettaglio-negozio/620-nonantola.html",
       "volantino": "https://www.coopalleanza3-0.it/fare-spesa/elenco-negozi/dettaglio-negozio/620-nonantola.html"
+    },
+    {
+      "id": "carrefour",
+      "nome": "Carrefour Casalecchio",
+      "tipo": "carrefour",
+      "colore": "#1A8BD6",
+      "negozio": "Carrefour Iper, Shopville Gran Reno, Via Marilyn Monroe 2, Casalecchio di Reno",
+      "volantino": "https://www.carrefour.it/volantino/ipermercato-carrefour-iper-casalecchio-di-reno-via-m-monroe-n2-9/0729",
+      "escludi_titoli": "catalogo|payback|punti"
     }
   ]
 }

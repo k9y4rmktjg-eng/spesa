@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scarica le offerte settimanali di Lidl, Conad e Coop (zona Nonantola)
+Scarica le offerte settimanali di Lidl, Conad e Coop (zona Nonantola) e Carrefour Casalecchio
 e scrive data/offerte.json per l'app "Spesa di Famiglia".
 
 Gira da solo su GitHub Actions ogni settimana. Se una catena fallisce,
@@ -625,6 +625,133 @@ def coop_volantini(ctx, n):
     return volantini
 
 
+# ---------------------------------------------------------------- CARREFOUR (sito ufficiale)
+# Tutto il lavoro sul sito si fa DENTRO la pagina del negozio (scraper/carrefour.js), come un
+# browser normale: così passa anche la protezione anti-robot del sito.
+_CARREFOUR = {}   # risultato letto una volta sola, usato sia per le offerte sia per le pagine
+
+
+def _carrefour_dati(ctx, n):
+    if n["id"] in _CARREFOUR:
+        return _CARREFOUR[n["id"]]
+    page = ctx.new_page()
+    try:
+        page.goto(n["volantino"], wait_until="domcontentloaded", timeout=90000)
+        for _ in range(20):  # se compare il controllo anti-robot, aspetta che si risolva da solo
+            if "volantino" in page.title().lower():
+                break
+            page.wait_for_timeout(1500)
+        else:
+            raise RuntimeError("il sito Carrefour ha bloccato lo scaricamento automatico (controllo anti-robot)")
+        page.wait_for_timeout(1500)
+        rifiuta_cookie(page)
+        js = (ROOT / "scraper" / "carrefour.js").read_text(encoding="utf-8")
+        js = "\n".join(r for r in js.splitlines() if not r.lstrip().startswith("//"))
+        dati = page.evaluate(js, {"escludi": n.get("escludi_titoli", "catalogo|payback|punti")})
+    finally:
+        page.close()
+    _CARREFOUR[n["id"]] = dati
+    return dati
+
+
+def _date_carrefour(testo):
+    """'dal 6/11 al 15/11' -> ('2026-11-06', '2026-11-15'), con l'anno giusto anche a cavallo di capodanno."""
+    oggi = datetime.now(ZoneInfo("Europe/Rome")).date()
+    def d(g, m):
+        anno = oggi.year + (1 if m < oggi.month - 6 else -1 if m > oggi.month + 6 else 0)
+        return f"{anno}-{m:02d}-{g:02d}"
+    t = re.findall(r"(\d{1,2})/(\d{1,2})", testo or "")
+    dal = d(int(t[0][0]), int(t[0][1])) if t else None
+    al = d(int(t[-1][0]), int(t[-1][1])) if len(t) > 1 else None
+    if dal and al and al < dal:  # es. dal 20/12 al 6/01
+        al = f"{int(al[:4]) + 1}{al[4:]}"
+    return dal, al
+
+
+def carrefour(ctx, n):
+    dati = _carrefour_dati(ctx, n)
+    offerte, visti = [], set()
+    for v in dati.get("volantini", []):
+        dal, al = _date_carrefour(v.get("validita"))
+        if v.get("offerte"):
+            log(f"   {v['titolo']}: {len(v['offerte'])} prodotti")
+        for o in v.get("offerte", []):
+            p = prezzo(o.get("prezzo")) if "€" in (o.get("prezzo") or "") else None
+            nome = (o.get("nome") or "").strip()
+            if not p or not nome or nome.lower() == "su tutta la linea":
+                continue   # offerte "-30% su tutta la linea" senza un prezzo: non si possono mettere in lista
+            mecc = o.get("meccanica") or ""
+            prima = prezzo(o.get("prima"))
+            dettaglio = []
+            # 3x2 e simili: il sito dà il totale per N pezzi, nell'app mettiamo il prezzo del singolo pezzo
+            m = re.search(r"(\d+)\s*pezzi", o.get("dopo") or "")
+            if m and int(m.group(1)) > 1:
+                q = int(m.group(1))
+                dettaglio.append(f"prendendone {q}: {str(p).replace('.', ',')} € in tutto")
+                p = round(p / q, 2)
+            if "al pezzo" in (o.get("prezzo") or ""):
+                dettaglio.append("prezzo al pezzo")
+            unit = o.get("unitario") or ""
+            if unit.strip().lower() == "al kg":
+                unit = "prezzo al kg"
+            sc = re.search(r"-\s?\d+(?:[.,]\d+)?\s?[%€]|\d\s?[xX]\s?\d|\d\+\d\s?gratis", mecc, re.I)
+            sconto = sc.group(0).replace(" ", "").replace("X", "x") if sc else ""
+            if "gratis" in sconto.lower():
+                sconto = sconto.lower().replace("gratis", " gratis")
+            note = [v["titolo"]]
+            if re.search(r"sottocosto", mecc, re.I):
+                pz = re.search(r"([\d.]+)\s*PEZZI", mecc, re.I)
+                testo = f"{pz.group(1)} pezzi disponibili" if pz else ""
+                if "sottocosto" not in v["titolo"].lower():
+                    testo = "Sottocosto" + (", " + testo if testo else "")
+                if testo:
+                    note.append(testo)
+            if re.search(r"su tutta la linea", mecc, re.I):
+                note.append("su tutta la linea")
+            if re.search(r"spesamica|payback", o.get("carta") or "", re.I):
+                note.append("con carta SpesAmica")
+            key = (nome.lower(), p, v["id"])
+            if key in visti:
+                continue
+            visti.add(key)
+            offerte.append({
+                "id": "carrefour-" + uid(o.get("pid"), v["id"]),
+                "negozio": n["id"],
+                "nome": bel_nome(nome),
+                "marca": bel_nome(o.get("marca") or ""),
+                "dettaglio": " · ".join(dettaglio),
+                "unitario": re.sub(r"€\s?([\d.,]+)", r"\1 €", unit).replace(" Kg", " kg").replace(" Lt", " l"),
+                "prezzo": p,
+                "prezzo_prima": prima if prima and prima > p else None,
+                "sconto": sconto,
+                "categoria": categoria(nome),
+                "nota": " · ".join(note),
+                "immagine": o.get("immagine") or None,
+                "link": o.get("link") or v.get("url"),
+                "dal": dal,
+                "al": al,
+            })
+    log(f"  Carrefour: {len(dati.get('volantini', []))} volantini, {len(offerte)} offerte con prezzo")
+    return offerte
+
+
+def carrefour_volantini(ctx, n):
+    dati = _carrefour_dati(ctx, n)
+    volantini = []
+    for v in dati.get("volantini", []):
+        dal, al = _date_carrefour(v.get("validita"))
+        vv = {"url": v.get("url") or n["volantino"], "nome": v.get("titolo") or "", "dal": dal, "al": al,
+              "n": sum(1 for o in v.get("offerte", []) if "€" in (o.get("prezzo") or ""))}
+        if v.get("pagine"):
+            try:
+                vv["pagine"] = salva_pagine(ctx, n["id"], v["id"], v["pagine"], "https://www.carrefour.it/")
+            except Exception as e:
+                log(f"   pagine Carrefour non scaricate ({vv['nome']}): {e}")
+        volantini.append(vv)
+    log(f"  Carrefour: {len(volantini)} volantini ({sum(1 for v in volantini if v.get('pagine'))} sfogliabili)")
+    return volantini
+
+
 def pulisci_volantini(stati):
     """Cancella le pagine dei volantini che non servono più (scaduti o tolti dal sito)."""
     usate = {str(Path(p).parent) for s in stati for v in s.get("volantini") or [] for p in v.get("pagine") or []}
@@ -638,8 +765,8 @@ def pulisci_volantini(stati):
 
 
 # ---------------------------------------------------------------- main
-FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad}
-VOLANTINI = {"lidl": lidl_volantini, "coop": coop_volantini}   # link e pagine dei volantini
+FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad, "carrefour": carrefour}
+VOLANTINI = {"lidl": lidl_volantini, "coop": coop_volantini, "carrefour": carrefour_volantini}   # link e pagine dei volantini
 
 
 def main():

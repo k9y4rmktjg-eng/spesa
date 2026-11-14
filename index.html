@@ -308,6 +308,52 @@ body.desk .sf.conoff .sf-pag,body.desk .sf.conoff .sf-bot{margin-right:400px}
 .sf-bot button{width:44px;height:36px;border:0;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;font-size:18px}
 .sf-bot button:disabled{opacity:.3}
 .sf-hint{position:absolute;left:50%;bottom:calc(64px + var(--safe-b));transform:translateX(-50%);background:rgba(0,0,0,.7);padding:6px 12px;border-radius:99px;font-size:12.5px;pointer-events:none;transition:opacity .5s}
+
+/* ===== STILE MODERNO (prova) ===== */
+:root{
+  --bg:#F4F5F7; --bg2:#EBEDF0; --card:#FFFFFF; --ink:#111316; --ink2:#4A4F57; --ink3:#8A9099;
+  --line:#E2E5EA; --accent:#16A34A; --accent-ink:#fff; --accent-soft:#DCFCE7;
+  --deal:#FF3B30; --r:20px;
+  --shadow:0 1px 1px rgba(16,24,40,.04),0 4px 14px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#0B0C0E;--bg2:#15171A;--card:#1A1C20;--ink:#F2F4F7;--ink2:#B8BEC7;--ink3:#7D848E;
+    --line:#2A2E34;--accent:#30D158;--accent-ink:#04210F;--accent-soft:#12301D;--deal:#FF453A;
+    --shadow:0 1px 1px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.45);}
+}
+h2,h3{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif!important;font-weight:800;letter-spacing:-.02em}
+h1{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-weight:800;letter-spacing:-.035em;display:flex;align-items:center;gap:10px}
+h1::before{content:"";flex:none;width:1.2em;height:1.2em;border-radius:.32em;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%222.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2.5%203.5h2.6l2.3%2011.2a1.6%201.6%200%200%200%201.6%201.3h8.3a1.6%201.6%200%200%200%201.6-1.2l1.6-7.3H6.2%22/%3E%3Ccircle%20cx%3D%229.6%22%20cy%3D%2220%22%20r%3D%221.4%22%20fill%3D%22%23fff%22%20stroke%3D%22none%22/%3E%3Ccircle%20cx%3D%2217.4%22%20cy%3D%2220%22%20r%3D%221.4%22%20fill%3D%22%23fff%22%20stroke%3D%22none%22/%3E%3C/svg%3E") center/70% no-repeat,linear-gradient(145deg,#2FD06B,#0E8A3E);box-shadow:0 3px 10px rgba(14,138,62,.35),inset 0 1px 0 rgba(255,255,255,.25)}
+header.compatto h1::before{width:1.15em;height:1.15em}
+.sub{font-weight:500}
+.prezzo,.serif{font-family:-apple-system,"SF Pro Display",BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif!important;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.search{border-radius:14px;border-color:transparent;background:var(--bg2)}
+.chip{border-color:transparent;background:var(--card);box-shadow:var(--shadow)}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.card{border-radius:22px;transition:transform .18s ease,box-shadow .18s ease}
+.card:active{transform:scale(.98)}
+.sconto{background:var(--deal);color:#fff;transform:none;border-radius:99px;padding:3px 8px}
+.badge{border-radius:99px;padding:3px 8px}
+.add{transition:transform .15s ease}
+.add.pop{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.25)}100%{transform:scale(1)}}
+nav{border-radius:0}
+.vol{border-radius:20px}
+/* le migliori di oggi */
+.best{display:block;grid-column:1/-1;width:100%;margin:16px 0 4px;min-width:0}
+.best h2{width:100%;font-size:20px;font-weight:800;letter-spacing:-.02em;margin:0 2px 10px;display:flex;align-items:baseline;gap:8px}
+.best h2 small{font-size:13px;font-weight:500;color:var(--ink3)}
+.best-l{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:2px 2px 10px;margin:0;scrollbar-width:none}
+.best-l::-webkit-scrollbar{display:none}
+.best-c{flex:0 0 150px;scroll-snap-align:start;position:relative;background:var(--card);border-radius:20px;box-shadow:var(--shadow);overflow:hidden;cursor:pointer}
+.best-c .im{height:110px;background:#fff;display:grid;place-items:center;overflow:hidden}
+.best-c .im img{width:100%;height:110px;object-fit:contain;padding:8px;box-sizing:border-box;display:block}
+.best-c .pc{position:absolute;top:8px;left:8px;background:var(--deal);color:#fff;font-weight:800;font-size:13px;padding:3px 8px;border-radius:99px}
+.best-c .tx{padding:8px 10px 10px}
+.best-c .nm{font-size:13px;font-weight:600;line-height:1.25;height:2.5em;overflow:hidden}
+.best-c .ng{font-size:11px;font-weight:700;margin-top:4px}
+.best-c .pr{font-size:18px;font-weight:800;letter-spacing:-.02em;margin-top:2px}
+body.desk .best-l{margin:0;padding-left:2px}
 </style>
 </head>
 <body>
@@ -1127,6 +1173,25 @@ if("serviceWorker" in navigator && location.protocol==="https:") navigator.servi
 LISTA = LS.get("listaLocale",[]); PREF = LS.get("preferitiLocali",[]); statoSync(); disegnaLista();
 caricaOfferte(); collega();
 if(!nomeUtente() && !LS.get("pin","")) setTimeout(()=>toast("Benvenuto! Imposta nome e codice in Famiglia"),900);
+
+/* ===== le migliori di oggi (prova) ===== */
+const NOFOOD=new Set(["Non alimentari","Casa e pulizia","Cura della persona","Animali","Infanzia","Altro"]);
+function disegnaTop(){
+  let box = document.getElementById("top");
+  if(!box){ box = document.createElement("section"); box.id="top"; box.className="best"; $("#volantini").after(box); }
+  const libero = !filtro.q && filtro.neg==="tutti" && filtro.cat==="tutte";
+  if(!libero){ box.hidden = true; return; }
+  const per = {}, l = DATI.offerte.filter(o=>(!o.dal||o.dal<=oggi) && o._pct>=25 && o.immagine && !NOFOOD.has(o.categoria))
+    .sort((a,b)=>b._pct-a._pct).filter(o=>(per[o.negozio]=(per[o.negozio]||0)+1)<=3).slice(0,12);
+  box.hidden = !l.length;
+  box.innerHTML = `<h2>Le migliori di oggi <small>sconti più alti</small></h2><div class="best-l">${l.map(o=>{ const n=NEG[o.negozio]||NEG.altro;
+    return `<div class="best-c" data-topid="${esc(o.id)}"><div class="im"><img loading="lazy" referrerpolicy="no-referrer" src="${esc(o.immagine)}" alt=""></div><span class="pc">-${o._pct}%</span>
+      <div class="tx"><div class="nm">${esc(o.nome)}</div><div class="ng" style="color:${n.colore}">${esc(n.breve||n.nome)}</div><div class="pr">${euro(o.prezzo)}</div></div></div>`; }).join("")}</div>`;
+}
+const _disegnaOfferte = disegnaOfferte;
+disegnaOfferte = function(){ _disegnaOfferte.apply(this, arguments); disegnaTop(); };
+document.addEventListener("click", e=>{ const t=e.target.closest("[data-topid]"); if(t) apriDettaglio(t.dataset.topid);
+  const a=e.target.closest(".add"); if(a){ a.classList.remove("pop"); void a.offsetWidth; a.classList.add("pop"); } });
 </script>
 </body>
 </html>

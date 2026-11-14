@@ -85,6 +85,7 @@ main{padding:6px 16px 20px}
 
 /* griglia offerte */
 .volantini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0 2px}
+.volantini.q4{grid-template-columns:repeat(2,1fr)}
 .vol{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:10px 10px 9px;border-radius:14px;border:0;text-align:left;text-decoration:none;color:#fff;
   background:linear-gradient(150deg,color-mix(in srgb,var(--c) 92%,#fff) 0%,var(--c) 55%,color-mix(in srgb,var(--c) 70%,#000) 100%);box-shadow:var(--shadow);overflow:hidden;cursor:pointer}
 .vol:active{transform:scale(.97)}
@@ -391,7 +392,8 @@ const CFG = window.SPESA_CONFIG || {};
 const $ = s => document.querySelector(s);
 const NEG = {
   lidl:{nome:"Lidl",colore:"#0050AA",sigla:"L"}, conad:{nome:"Conad",colore:"#E30613",sigla:"C"},
-  coop:{nome:"Coop",colore:"#D3001C",sigla:"Co"}, altro:{nome:"Altro",colore:"#7A6A4F",sigla:"•"}
+  coop:{nome:"Coop",colore:"#D3001C",sigla:"Co"}, carrefour:{nome:"Carrefour Casalecchio",breve:"Carrefour",colore:"#1A8BD6",sigla:"Cr"},
+  altro:{nome:"Altro",colore:"#7A6A4F",sigla:"•"}
 };
 const euro = v => v==null||isNaN(v) ? "" : v.toLocaleString("it-IT",{style:"currency",currency:"EUR"});
 const esc = s => String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -498,7 +500,7 @@ function cardHTML(o){
     : `<span class="emoji">${emojiPer(o.nome)}</span>`;
   const sc = o.sconto || (o._pct ? "-"+o._pct+"%" : "");
   return `<article class="card" data-id="${esc(o.id)}">
-    <div class="ph">${img}<span class="badge" style="background:${n.colore}">${n.nome}</span>${sc?`<span class="sconto">${esc(sc)}</span>`:""}${o._pref?`<span class="stella" title="Preferito">⭐</span>`:""}</div>
+    <div class="ph">${img}<span class="badge" style="background:${n.colore}">${n.breve||n.nome}</span>${sc?`<span class="sconto">${esc(sc)}</span>`:""}${o._pref?`<span class="stella" title="Preferito">⭐</span>`:""}</div>
     <div class="info"><div class="nome">${esc(o.nome)}</div>
       <div class="det">${esc([o.marca,o.dettaglio].filter(Boolean).join(" · ")||o.nota||"")}</div>
       <div class="prezzi"><span class="prezzo">${euro(o.prezzo)}</span>${o.prezzo_prima?`<span class="prima">${euro(o.prezzo_prima)}</span>`:""}</div>
@@ -535,7 +537,7 @@ function volantiniDi(n){
   // se ci sono volantini da sfogliare nell'app, mostro solo quelli (gli altri link portano a elenchi già nelle offerte)
   const sfogliabili = diretti.filter(v=>v.pagine?.length);
   if(sfogliabili.length) return sfogliabili.map(v=>({...v, n: v.n || DATI.offerte.filter(o=>o.negozio===n.id && o.link===v.url).length}))
-    .sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
+    .sort((a,b)=>((b.n>0)-(a.n>0)) || (a.dal||"").localeCompare(b.dal||""));  // prima i volantini con offerte, poi gli speciali
   if(diretti.length) return diretti.map(v=>({...v, n: v.n || DATI.offerte.filter(o=>o.negozio===n.id && o.link===v.url).length}))
     .sort((a,b)=>(a.dal||"").localeCompare(b.dal||""));
   const per = {};
@@ -549,6 +551,7 @@ function volantiniDi(n){
 }
 function disegnaVolantini(){
   const negozi = (DATI.negozi||[]).filter(n=>NEG[n.id]);
+  $("#volantini").classList.toggle("q4", negozi.filter(n=>volantiniDi(n).length).length===4);
   $("#volantini").innerHTML = negozi.map(n=>{
     const vv = volantiniDi(n); if(!vv.length) return "";
     // data del volantino in corso oggi (se nessuno è ancora iniziato, del primo che inizia)
@@ -695,7 +698,7 @@ function apriDettaglio(id){
   const n = NEG[o.negozio]||NEG.altro;
   $("#sheet").innerHTML = `<div class="grab"></div><button class="chiudi" id="shX" aria-label="Chiudi">✕</button>
     <div class="ph">${o.immagine?`<img src="${esc(o.immagine)}" referrerpolicy="no-referrer" alt="">`:`<span class="emoji" style="font-size:80px">${emojiPer(o.nome)}</span>`}
-      <span class="badge" style="background:${n.colore}">${n.nome}</span>${o.sconto||o._pct?`<span class="sconto">${esc(o.sconto||"-"+o._pct+"%")}</span>`:""}</div>
+      <span class="badge" style="background:${n.colore}">${n.breve||n.nome}</span>${o.sconto||o._pct?`<span class="sconto">${esc(o.sconto||"-"+o._pct+"%")}</span>`:""}</div>
     <h2>${esc(o.nome)}</h2>
     <div class="meta">${esc([o.marca,o.dettaglio].filter(Boolean).join(" · "))}</div>
     <div class="prezzi"><span class="prezzo">${euro(o.prezzo)}</span>${o.prezzo_prima?`<span class="prima">${euro(o.prezzo_prima)}</span>`:""}</div>

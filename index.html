@@ -277,7 +277,13 @@ body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
 .sf-o .pr s{display:block;font-weight:400;color:var(--ink3);font-size:12px}
 .sf-o .sfadd{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:20px;font-weight:700}
 .sf-o .sfadd.in{background:var(--ink)}
-.sf.conoff .sf-off{position:relative;height:46%;flex:none}
+.sf.conoff .sf-off{position:relative;height:46%;flex:none;transition:height .25s ease}
+.sf-maniglia{display:block;width:100%;height:18px;border:0;background:none;padding:8px 0 0}
+.sf-maniglia span{display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto}
+.sf.conoff .sf-off.mini{height:auto}
+.sf-off.mini .sf-offl{display:none}
+.sf-off.mini .sf-offh{padding-bottom:calc(10px + var(--safe-b))}
+body.desk .sf-maniglia{display:none}
 body.desk .sf.conoff .sf-off{position:absolute;left:auto;right:0;width:400px;height:auto;top:56px;bottom:0;border-radius:20px 0 0 20px}
 body.desk .sf.conoff .sf-pag,body.desk .sf.conoff .sf-bot{margin-right:400px}
 /* sfogliatore volantini */
@@ -410,6 +416,7 @@ body.desk .sf.conoff .sf-pag,body.desk .sf.conoff .sf-bot{margin-right:400px}
   <div class="sf-bot"><button id="sfPrev" aria-label="Pagina precedente">‹</button><span id="sfNum"></span><button id="sfNext" aria-label="Pagina successiva">›</button>
     <button class="sf-offbtn" id="sfOffBtn" hidden>🛒 Offerte <span id="sfOffN"></span></button></div>
   <div class="sf-off" id="sfOff" hidden>
+    <button class="sf-maniglia" id="sfOffMin" aria-label="Riduci o allarga l'elenco"><span></span></button>
     <div class="sf-offh"><input id="sfOffQ" type="search" placeholder="Cerca nel volantino…" autocomplete="off"><button id="sfOffX" aria-label="Chiudi elenco">✕</button></div>
     <div class="sf-offl" id="sfOffL"></div>
   </div>
@@ -628,7 +635,7 @@ function apriSfogliatore(id, k, riapri){
   const nv = (v.nome||"").toLowerCase();
   if(nv && !/^offerte valide/.test(nv)){ const st = off.filter(o=>(o.nota||"").toLowerCase().startsWith(nv)); if(st.length) off = st; }
   SF.off = off;
-  $("#sfOffBtn").hidden = !off.length; $("#sfOffN").textContent = off.length || ""; $("#sfOff").hidden = true; $("#sf").classList.remove("conoff"); $("#sfOffQ").value = "";
+  $("#sfOffBtn").hidden = !off.length; $("#sfOffN").textContent = off.length || ""; $("#sfOff").hidden = true; $("#sfOff").classList.remove("mini"); $("#sf").classList.remove("conoff"); $("#sfOffQ").value = "";
   // su computer: copertina da sola, poi pagine a coppie come il volantino di carta
   SF.fogli = isDesk() ? [[0], ...Array.from({length:Math.ceil((v.pagine.length-1)/2)},(_,k)=>[1+2*k,2+2*k].filter(x=>x<v.pagine.length))]
                       : v.pagine.map((_,i)=>[i]);
@@ -698,6 +705,12 @@ function mostraOffSf(si){
   const el=$("#sfPag"), i=SF.i; requestAnimationFrame(()=>{ el.scrollLeft = i*el.clientWidth; sfAggiorna(); });  // resta sulla stessa pagina
 }
 $("#sfOffBtn").onclick = ()=>mostraOffSf($("#sfOff").hidden);
+// su iPhone l'elenco si riduce alla sola ricerca, così il volantino torna grande
+function riduciOffSf(si){ $("#sfOff").classList.toggle("mini", si); const el=$("#sfPag"), i=SF.i; requestAnimationFrame(()=>{ el.scrollLeft=i*el.clientWidth; sfAggiorna(); }); }
+$("#sfOffMin").onclick = ()=>riduciOffSf(!$("#sfOff").classList.contains("mini"));
+$("#sfOffQ").addEventListener("focus",()=>{ if($("#sfOff").classList.contains("mini")) riduciOffSf(false); });
+let ySf=null; $("#sfOff").addEventListener("touchstart",e=>{ ySf = e.target.closest(".sf-offl") ? null : e.touches[0].clientY; },{passive:true});
+$("#sfOff").addEventListener("touchend",e=>{ if(ySf==null) return; const d=e.changedTouches[0].clientY-ySf; if(d>40) riduciOffSf(true); else if(d<-40) riduciOffSf(false); ySf=null; });
 $("#sfOffX").onclick = ()=>mostraOffSf(false);
 let tSfq; $("#sfOffQ").oninput = ()=>{ clearTimeout(tSfq); tSfq=setTimeout(disegnaOffSf,150); };
 $("#sfOffL").onclick = e=>{ const b=e.target.closest("[data-sfadd]"); if(!b) return;

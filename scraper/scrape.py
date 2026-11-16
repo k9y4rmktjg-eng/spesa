@@ -321,6 +321,45 @@ def _maiuscolo(t):
     return len(l) >= 3 and sum(c.isupper() for c in l) / len(l) > 0.8
 
 
+def _testo_pdf(pdf_bytes):
+    try:
+        import pymupdf as fitz
+    except ImportError:
+        import fitz
+    return [set(_parole(pg.get_text())) for pg in fitz.open(stream=pdf_bytes, filetype="pdf")]
+
+
+def salva_pagine_pdf(pdf_bytes, neg, vid):
+    """Pagine di un volantino PDF salvate come immagini da sfogliare (come quelle scaricate dagli altri siti)."""
+    try:
+        import pymupdf as fitz
+    except ImportError:
+        import fitz
+    from PIL import Image
+    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    cart = VOL_DIR / neg / re.sub(r"[^A-Za-z0-9_-]", "", vid)
+    nomi = [f"{i + 1:02d}.jpg" for i in range(len(doc))]
+    mark = cart / ".versione"
+    if cart.exists() and all((cart / x).exists() for x in nomi) and mark.exists() and mark.read_text().strip() == VOL_VER:
+        return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
+    tmp = cart.with_name(cart.name + "_new")
+    shutil.rmtree(tmp, ignore_errors=True)
+    tmp.mkdir(parents=True)
+    for pg, nome in zip(doc, nomi):
+        z = min(4.0, VOL_LARGH * 1.6 / pg.rect.width)   # un po' più grande, poi _salva_jpg la riduce bene
+        pix = pg.get_pixmap(matrix=fitz.Matrix(z, z), alpha=False)
+        _salva_jpg(Image.frombytes("RGB", (pix.width, pix.height), pix.samples), tmp / nome)
+    mark_tmp = tmp / ".versione"
+    mark_tmp.write_text(VOL_VER)
+    shutil.rmtree(cart, ignore_errors=True)
+    tmp.rename(cart)
+    log(f"   create {len(nomi)} pagine da sfogliare in {cart.relative_to(ROOT)}")
+    return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
+
+
+_CONAD_VOL = {}   # negozio -> volantini Conad con le pagine create dal PDF
+
+
 def conad_pdf(pdf_bytes, flyer, img_out):
     try:
         import pymupdf as fitz
@@ -464,6 +503,9 @@ def conad_pdf(pdf_bytes, flyer, img_out):
             if clip is None:
                 clip = tile or (fitz.Rect(min(gruppo[0]["bbox"].x0, P.x0) - 20, gruppo[0]["bbox"].y0 - 0.12 * H,
                                           max(P.x1, gruppo[0]["bbox"].x1) + 20, P.y1 + 10) & page.rect)
+            # riquadro toccabile nello sfogliatore: il riquadro colorato, oppure foto + nome + prezzo
+            Z = (tile if tile is not None else (clip | gruppo[0]["bbox"] | P)) & page.rect
+            box = [round(Z.x0 / W * 100, 1), round(Z.y0 / H * 100, 1), round(Z.width / W * 100, 1), round(Z.height / H * 100, 1)]
             img_url = None
             try:
                 zoom = min(3.0, 420 / max(clip.width, 1))
@@ -489,6 +531,9 @@ def conad_pdf(pdf_bytes, flyer, img_out):
                 "link": flyer.get("pdfUrl"),
                 "dal": iso(flyer.get("validFrom")),
                 "al": iso(flyer.get("validTo")),
+                "vol": re.sub(r"[^A-Za-z0-9_-]", "", str(flyer.get("flyerCode") or "")),
+                "pg": pno,
+                "box": box,
             })
     return offerte
 
@@ -541,6 +586,14 @@ def conad(ctx, n):
         o = conad_pdf(r.body(), f, img_out)
         log(f"   {f.get('title')}: {len(o)} prodotti")
         offerte += o
+        try:  # pagine da sfogliare nell'app, create dal PDF
+            vid = str(f.get("flyerCode") or uid(f["pdfUrl"]))
+            pag = salva_pagine_pdf(r.body(), "conad", vid)
+            _CONAD_VOL.setdefault(n["id"], []).append({
+                "url": f["pdfUrl"], "nome": bel_nome(f.get("title") or ""), "dal": iso(f.get("validFrom")),
+                "al": iso(f.get("validTo")), "n": len(o), "pagine": pag})
+        except Exception as e:
+            log(f"   pagine Conad non create: {e}")
     if len(offerte) >= MIN_OFFERTE:
         shutil.rmtree(IMG_DIR / "conad", ignore_errors=True)
         img_out.rename(IMG_DIR / "conad")
@@ -586,7 +639,7 @@ def salva_pagine(ctx, neg, vid, urls, referer=""):
     return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
 
 
-_LIDL_PAGINE = {}   # id volantino -> parole chiave di ogni pagina (date dal sito Lidl)
+_PAGINE_KW = {}   # negozio -> {id volantino: {dal, al, titolo?, kw: [parole di ogni pagina]}}
 
 
 def _parole(t):
@@ -594,16 +647,19 @@ def _parole(t):
     return re.sub(r"[^a-z0-9]+", " ", t).split()
 
 
-def lidl_pagine_offerte(offerte):
-    """Per ogni offerta Lidl trova la pagina del volantino in cui compare (confrontando le parole).
+def pagine_offerte(offerte, volantini, nome="Lidl"):
+    """Per ogni offerta trova la pagina del volantino in cui compare (confrontando le parole).
     Serve all'app per mostrare "i prodotti di questa pagina" mentre si sfoglia."""
     trovate = 0
     for o in offerte:
         t = list(dict.fromkeys(w for w in _parole(f"{o.get('nome', '')} {o.get('marca') or ''}") if len(w) >= 3))
         if not t:
             continue
+        # se il volantino ha un titolo, solo le offerte di quel volantino (Coop: la nota inizia col titolo)
+        vv = {k: f for k, f in volantini.items()
+              if not f.get("titolo") or (o.get("nota") or "").lower().startswith(f["titolo"].lower())}
         # prima i volantini con date compatibili con l'offerta, poi gli altri
-        cand = sorted(_LIDL_PAGINE.items(), key=lambda kv: not (
+        cand = sorted(vv.items(), key=lambda kv: not (
             (not o.get("al") or o["al"] >= kv[1]["dal"]) and (not o.get("dal") or o["dal"] <= kv[1]["al"])))
         best = (0, 0, None, None)
         for fid, f in cand:
@@ -612,9 +668,9 @@ def lidl_pagine_offerte(offerte):
                 if (m / len(t), m) > best[:2]:
                     best = (m / len(t), m, fid, i)
         if best[0] >= 0.6:
-            o.update(vol=re.sub(r"[^A-Za-z0-9_-]", "", best[2]), pg=best[3])
+            o.update(vol=best[2], pg=best[3])
             trovate += 1
-    log(f"  Lidl: {trovate}/{len(offerte)} offerte collegate a una pagina del volantino")
+    log(f"  {nome}: {trovate}/{len(offerte)} offerte collegate a una pagina del volantino")
 
 
 def lidl_volantini(ctx, n):
@@ -641,8 +697,9 @@ def lidl_volantini(ctx, n):
                  "dal": f.get("offerStartDate") or f.get("startDate") or "",
                  "al": f.get("offerEndDate") or f.get("endDate") or "", "n": 0}
             pg = [p for p in (f.get("pages") or []) if p.get("zoom") or p.get("image")]
-            _LIDL_PAGINE[fid] = {"dal": v["dal"][:10], "al": v["al"][:10],
-                                 "kw": [set(_parole(f"{p.get('keyWords') or ''} {p.get('altText') or ''}")) for p in pg]}
+            _PAGINE_KW.setdefault(n["id"], {})[re.sub(r"[^A-Za-z0-9_-]", "", fid)] = {
+                "dal": v["dal"][:10], "al": v["al"][:10],
+                "kw": [set(_parole(f"{p.get('keyWords') or ''} {p.get('altText') or ''}")) for p in pg]}
             try:
                 v["pagine"] = salva_pagine(ctx, "lidl", fid, [p.get("zoom") or p["image"] for p in pg])
             except Exception as e:
@@ -671,6 +728,13 @@ def coop_volantini(ctx, n):
                 urls = [p["path"] for p in sorted(s.get("pages", []), key=lambda p: p.get("number", 0)) if p.get("path")]
                 if urls:
                     v["pagine"] = salva_pagine(ctx, "coop", lf["id"], urls, n["pagina_negozio"])
+                    try:  # parole di ogni pagina, per sapere in che pagina sta ogni offerta
+                        kw = _testo_pdf(ctx.request.get(s["pdf_path"], headers=hdr, timeout=120000).body())
+                        if len(kw) == len(urls):
+                            _PAGINE_KW.setdefault(n["id"], {})[re.sub(r"[^A-Za-z0-9_-]", "", str(lf["id"]))] = {
+                                "dal": v["dal"], "al": v["al"], "titolo": v["nome"], "kw": kw}
+                    except Exception as e:
+                        log(f"   testo del PDF Coop non letto ({v['nome']}): {e}")
             except Exception as e:
                 log(f"   pagine Coop non scaricate ({v['nome']}): {e}")
         volantini.append(v)
@@ -804,9 +868,10 @@ def carrefour(ctx, n):
                 "dal": dal,
                 "al": al,
             })
+            offerte[-1]["vol"] = str(v["id"])
             if str(o.get("codice") or "") in zone:
                 pg, box = zone[str(o["codice"])]
-                offerte[-1].update(vol=str(v["id"]), pg=pg, box=box)
+                offerte[-1].update(pg=pg, box=box)
     log(f"  Carrefour: {len(dati.get('volantini', []))} volantini, {len(offerte)} offerte con prezzo, "
         f"{sum(1 for o in offerte if 'box' in o)} posizionate sulle pagine")
     return offerte
@@ -829,6 +894,13 @@ def carrefour_volantini(ctx, n):
     return volantini
 
 
+def conad_volantini(ctx, n):
+    v = _CONAD_VOL.get(n["id"])
+    if not v:
+        raise RuntimeError("nessun volantino Conad letto in questo giro")
+    return v
+
+
 def pulisci_volantini(stati):
     """Cancella le pagine dei volantini che non servono più (scaduti o tolti dal sito)."""
     usate = {str(Path(p).parent) for s in stati for v in s.get("volantini") or [] for p in v.get("pagine") or []}
@@ -843,7 +915,7 @@ def pulisci_volantini(stati):
 
 # ---------------------------------------------------------------- main
 FUNZIONI = {"lidl": lidl, "coop": coop, "conad": conad, "carrefour": carrefour}
-VOLANTINI = {"lidl": lidl_volantini, "coop": coop_volantini, "carrefour": carrefour_volantini}   # link e pagine dei volantini
+VOLANTINI = {"lidl": lidl_volantini, "coop": coop_volantini, "carrefour": carrefour_volantini, "conad": conad_volantini}   # link e pagine dei volantini
 
 
 # ---------- storico prezzi ----------
@@ -935,11 +1007,11 @@ def main():
                     log(f"  volantini non trovati: {e}")
                     if stati_vecchi.get(n["id"], {}).get("volantini"):
                         stato["volantini"] = stati_vecchi[n["id"]]["volantini"]
-            if n["tipo"] == "lidl" and _LIDL_PAGINE:
+            if _PAGINE_KW.get(n["id"]):
                 try:
-                    lidl_pagine_offerte([o for o in risultato if o["negozio"] == n["id"]])
+                    pagine_offerte([o for o in risultato if o["negozio"] == n["id"]], _PAGINE_KW[n["id"]], n["nome"])
                 except Exception as e:
-                    log(f"  pagine delle offerte Lidl non collegate: {e}")
+                    log(f"  pagine delle offerte non collegate: {e}")
             stati.append(stato)
             ctx.close()
         browser.close()

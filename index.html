@@ -843,7 +843,9 @@ $("#sfPag").addEventListener("click", e=>{
     const r=img.getBoundingClientRect(), pg=+img.dataset.pg, fx=(x-r.left)/r.width*100, fy=(y-r.top)/r.height*100;
     const hit = SF.inPag.filter(o=>o.pg===pg && o.box && fx>=o.box[0] && fx<=o.box[0]+o.box[2] && fy>=o.box[1] && fy<=o.box[1]+o.box[3])
                         .sort((a,b)=>a.box[2]*a.box[3]-b.box[2]*b.box[3])[0];
-    if(!hit){ if(!SF.tocco){ SF.modo="pag"; if($("#sfOff").hidden) mostraOffSf(true); else disegnaOffSf(); } return; }
+    // nessun riquadro qui (prodotto non riconosciuto o zona vuota): apre comunque l'elenco di questa pagina
+    if(!hit){ SF.modo="pag"; $("#sfOffQ").value=""; $("#sfOffQx").hidden=true;
+      if($("#sfOff").hidden) mostraOffSf(true); else { if($("#sfOff").classList.contains("mini")) riduciOffSf(false); disegnaOffSf(); } return; }
     const z=document.createElement("div"); z.className="sf-zona";
     Object.assign(z.style,{left:r.left+hit.box[0]/100*r.width+"px", top:r.top+hit.box[1]/100*r.height+"px", width:hit.box[2]/100*r.width+"px", height:hit.box[3]/100*r.height+"px"});
     document.body.appendChild(z); setTimeout(()=>z.remove(),1200);

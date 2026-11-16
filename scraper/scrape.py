@@ -586,6 +586,37 @@ def salva_pagine(ctx, neg, vid, urls, referer=""):
     return [f"data/vol/{neg}/{cart.name}/{x}" for x in nomi]
 
 
+_LIDL_PAGINE = {}   # id volantino -> parole chiave di ogni pagina (date dal sito Lidl)
+
+
+def _parole(t):
+    t = unicodedata.normalize("NFKD", (t or "").lower()).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", " ", t).split()
+
+
+def lidl_pagine_offerte(offerte):
+    """Per ogni offerta Lidl trova la pagina del volantino in cui compare (confrontando le parole).
+    Serve all'app per mostrare "i prodotti di questa pagina" mentre si sfoglia."""
+    trovate = 0
+    for o in offerte:
+        t = list(dict.fromkeys(w for w in _parole(f"{o.get('nome', '')} {o.get('marca') or ''}") if len(w) >= 3))
+        if not t:
+            continue
+        # prima i volantini con date compatibili con l'offerta, poi gli altri
+        cand = sorted(_LIDL_PAGINE.items(), key=lambda kv: not (
+            (not o.get("al") or o["al"] >= kv[1]["dal"]) and (not o.get("dal") or o["dal"] <= kv[1]["al"])))
+        best = (0, 0, None, None)
+        for fid, f in cand:
+            for i, kw in enumerate(f["kw"]):
+                m = sum(1 for w in t if w in kw)
+                if (m / len(t), m) > best[:2]:
+                    best = (m / len(t), m, fid, i)
+        if best[0] >= 0.6:
+            o.update(vol=re.sub(r"[^A-Za-z0-9_-]", "", best[2]), pg=best[3])
+            trovate += 1
+    log(f"  Lidl: {trovate}/{len(offerte)} offerte collegate a una pagina del volantino")
+
+
 def lidl_volantini(ctx, n):
     """Volantini settimanali Lidl: link diretto e pagine da sfogliare nell'app."""
     page = ctx.new_page()
@@ -610,6 +641,8 @@ def lidl_volantini(ctx, n):
                  "dal": f.get("offerStartDate") or f.get("startDate") or "",
                  "al": f.get("offerEndDate") or f.get("endDate") or "", "n": 0}
             pg = [p for p in (f.get("pages") or []) if p.get("zoom") or p.get("image")]
+            _LIDL_PAGINE[fid] = {"dal": v["dal"][:10], "al": v["al"][:10],
+                                 "kw": [set(_parole(f"{p.get('keyWords') or ''} {p.get('altText') or ''}")) for p in pg]}
             try:
                 v["pagine"] = salva_pagine(ctx, "lidl", fid, [p.get("zoom") or p["image"] for p in pg])
             except Exception as e:
@@ -707,6 +740,12 @@ def carrefour(ctx, n):
     offerte, visti = [], set()
     for v in dati.get("volantini", []):
         dal, al = _date_carrefour(v.get("validita"))
+        # dove sta ogni prodotto nelle pagine (per toccarlo nello sfogliatore dell'app)
+        nums = [int(m.group(1)) for u in v.get("pagine", []) for m in [re.search(r"_(\d+)_sliderzoom\.jpg$", u)] if m]
+        zone = {}
+        for z in v.get("zone", []):
+            if z.get("n") in nums and z.get("c"):
+                zone.setdefault(str(z["c"]), (nums.index(z["n"]), z["b"]))
         if v.get("offerte"):
             log(f"   {v['titolo']}: {len(v['offerte'])} prodotti")
         for o in v.get("offerte", []):
@@ -765,7 +804,11 @@ def carrefour(ctx, n):
                 "dal": dal,
                 "al": al,
             })
-    log(f"  Carrefour: {len(dati.get('volantini', []))} volantini, {len(offerte)} offerte con prezzo")
+            if str(o.get("codice") or "") in zone:
+                pg, box = zone[str(o["codice"])]
+                offerte[-1].update(vol=str(v["id"]), pg=pg, box=box)
+    log(f"  Carrefour: {len(dati.get('volantini', []))} volantini, {len(offerte)} offerte con prezzo, "
+        f"{sum(1 for o in offerte if 'box' in o)} posizionate sulle pagine")
     return offerte
 
 
@@ -892,6 +935,11 @@ def main():
                     log(f"  volantini non trovati: {e}")
                     if stati_vecchi.get(n["id"], {}).get("volantini"):
                         stato["volantini"] = stati_vecchi[n["id"]]["volantini"]
+            if n["tipo"] == "lidl" and _LIDL_PAGINE:
+                try:
+                    lidl_pagine_offerte([o for o in risultato if o["negozio"] == n["id"]])
+                except Exception as e:
+                    log(f"  pagine delle offerte Lidl non collegate: {e}")
             stati.append(stato)
             ctx.close()
         browser.close()

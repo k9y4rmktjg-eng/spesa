@@ -30,6 +30,18 @@ async (cfg) => {
       const z = [...new Set(t.match(/https?:[^"'\s\\]*_sliderzoom\.jpg/g) || [])];
       const num = u => +((u.match(/_(\d+)_sliderzoom\.jpg$/) || [])[1] || 0);
       v.pagine = z.sort((a, b) => num(a) - num(b));
+      // zone cliccabili dei prodotti su ogni pagina: id = codice articolo (lo stesso della foto del prodotto)
+      v.zone = [];
+      dom(t).querySelectorAll(".flayers-carousel .swiper-zoom-target").forEach((zt, k) => {
+        const im = zt.querySelector("img");
+        const u = im ? (im.dataset.src || im.getAttribute("src") || "") : "";
+        const n = +((u.match(/_(\d+)_slider[a-z]*\.jpg/) || [])[1] || k + 1);
+        zt.querySelectorAll(".layer_item").forEach(e => {
+          const st = e.getAttribute("style") || "";
+          const g = nome => +((st.match(new RegExp(nome + ":\\s*([\\d.]+)%")) || [])[1] || 0);
+          v.zone.push({ n, c: e.id.replace(/^a-/, ""), b: [g("left"), g("top"), g("width"), g("height")].map(x => Math.round(x * 10) / 10) });
+        });
+      });
     } catch (e) { v.errPagine = String(e); }
     try {
       const l = dom(await (await fetch(`${storePath}/x/${s.id}?label=all`)).text());
@@ -47,6 +59,7 @@ async (cfg) => {
             nome: (j.name || testo(tile.querySelector(".tile-description"))).trim(),
             marca: (j.brand || testo(tile.querySelector(".brand")) || "").trim(),
             immagine: assoluto(img && (img.dataset.src || img.getAttribute("src"))),
+            codice: (((img && (img.dataset.src || img.getAttribute("src"))) || "").match(/\/0*(\d+)(?:_\d+)?\.jpg/) || [])[1] || "",
             link: assoluto((tile.querySelector("a.product-link") || {}).getAttribute?.("href")),
             meccanica: testo(b.querySelector(".item-two")),
             carta: testo(b.querySelector(".item-three")),

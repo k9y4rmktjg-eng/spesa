@@ -704,11 +704,17 @@ function apriSfogliatore(id, k, riapri){
   SF.pag = v.pagine; SF.i = 0; SF.neg = id; SF.k = k;
   // offerte di questo volantino: stesso negozio e date che si sovrappongono (se le offerte dicono il volantino, solo quelle)
   let off = DATI.offerte.filter(o=>o.negozio===id && (!v.dal||!o.al||o.al>=v.dal) && (!v.al||!o.dal||o.dal<=v.al));
-  const nv = (v.nome||"").toLowerCase();
-  if(nv && !/^offerte valide/.test(nv)){ const st = off.filter(o=>(o.nota||"").toLowerCase().startsWith(nv)); if(st.length) off = st; }
-  SF.off = off;
-  // prodotti collegati alle pagine di questo volantino (Carrefour: anche il riquadro da toccare; Lidl: solo la pagina)
   SF.vid = (v.pagine[0].match(/data\/vol\/[^/]+\/([^/]+)\//)||[])[1] || "";
+  const nv = (v.nome||"").toLowerCase(), delNeg = DATI.offerte.filter(o=>o.negozio===id);
+  if(delNeg.length && delNeg.every(o=>o.vol)) off = off.filter(o=>o.vol===SF.vid);   // ogni offerta sa di che volantino è
+  else if(nv && !/^offerte valide/.test(nv)){
+    const st = off.filter(o=>(o.nota||"").toLowerCase().startsWith(nv));
+    // nessuna offerta di questo volantino, ma quelle presenti sono di un altro volantino: elenco vuoto
+    const altri = volantiniDi(n).filter(w=>w!==v && w.nome).map(w=>w.nome.toLowerCase());
+    off = st.length ? st : off.some(o=>altri.some(a=>(o.nota||"").toLowerCase().startsWith(a))) ? [] : off;
+  }
+  SF.off = off;
+  // prodotti collegati alle pagine di questo volantino (Carrefour e Conad: anche il riquadro da toccare; Lidl e Coop: solo la pagina)
   SF.inPag = off.filter(o=>o.vol===SF.vid && o.pg!=null);
   SF.tocco = SF.inPag.some(o=>o.box); SF.modo = SF.inPag.length ? "pag" : "tutto"; SF.q = {};
   $("#sfOffBtn").hidden = !off.length; $("#sfOffN").textContent = off.length || ""; $("#sfOff").hidden = true; $("#sfOff").classList.remove("mini"); $("#sf").classList.remove("conoff"); $("#sfOffQ").value = ""; $("#sfOffQx").hidden = true;

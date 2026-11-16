@@ -275,11 +275,25 @@ body.desk .sf-bot button:hover{background:rgba(255,255,255,.28)}
 .sf-o:first-child{border-top:0}
 .sf-o img,.sf-o .em{flex:none;width:46px;height:46px;border-radius:10px;object-fit:contain;background:#fff;display:grid;place-items:center;font-size:24px}
 .sf-o .tx{flex:1;min-width:0;font-size:14px;line-height:1.25}
+.sf-o .tx .nm{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .sf-o .tx small{display:block;color:var(--ink3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sf-o .pr{font-weight:800;font-size:15px;white-space:nowrap;text-align:right}
 .sf-o .pr s{display:block;font-weight:400;color:var(--ink3);font-size:12px}
 .sf-o .sfadd{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:20px;font-weight:700}
 .sf-o .sfadd.in{background:var(--accent);color:#fff;font-weight:800;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 35%,transparent)}
+/* prodotti toccabili sulle pagine e quantità nell'elenco */
+.sf-zona{position:fixed;z-index:4;border:3px solid var(--accent);border-radius:12px;background:color-mix(in srgb,var(--accent) 18%,transparent);pointer-events:none;animation:zona 1.1s ease forwards}
+@keyframes zona{0%{opacity:0;transform:scale(.96)}15%{opacity:1;transform:scale(1)}70%{opacity:1}100%{opacity:0}}
+.sf-modo{display:flex;gap:6px;padding:2px 0 8px;position:sticky;top:0;background:var(--card);z-index:1}
+.sf-modo button{flex:1;height:34px;border:0;border-radius:10px;background:var(--bg2);color:var(--ink2);font-size:13px;font-weight:700}
+.sf-modo button.on{background:var(--accent);color:var(--accent-ink,#fff)}
+.sf-o.flash{animation:flashr 1.6s ease}
+@keyframes flashr{0%,40%{background:color-mix(in srgb,var(--accent) 22%,transparent)}100%{background:transparent}}
+.sf-o{border-radius:12px}
+.sfq{flex:none;display:flex;align-items:center;gap:2px;background:var(--accent);border-radius:99px;padding:2px}
+.sfq button{width:34px;height:34px;border:0;border-radius:50%;background:transparent;color:#fff;font-size:20px;font-weight:700;line-height:1}
+.sfq b{min-width:22px;text-align:center;color:#fff;font-size:16px}
+.sf-vuoto{color:var(--ink3);text-align:center;padding:18px 8px;font-size:14px}
 .sf.conoff .sf-off{position:relative;height:46%;flex:none;transition:height .25s ease}
 .sf-maniglia{display:block;width:100%;height:18px;border:0;background:none;padding:8px 0 0}
 .sf-maniglia span{display:block;width:44px;height:5px;border-radius:3px;background:var(--line);margin:0 auto}
@@ -693,6 +707,10 @@ function apriSfogliatore(id, k, riapri){
   const nv = (v.nome||"").toLowerCase();
   if(nv && !/^offerte valide/.test(nv)){ const st = off.filter(o=>(o.nota||"").toLowerCase().startsWith(nv)); if(st.length) off = st; }
   SF.off = off;
+  // prodotti collegati alle pagine di questo volantino (Carrefour: anche il riquadro da toccare; Lidl: solo la pagina)
+  SF.vid = (v.pagine[0].match(/data\/vol\/[^/]+\/([^/]+)\//)||[])[1] || "";
+  SF.inPag = off.filter(o=>o.vol===SF.vid && o.pg!=null);
+  SF.tocco = SF.inPag.some(o=>o.box); SF.modo = SF.inPag.length ? "pag" : "tutto"; SF.q = {};
   $("#sfOffBtn").hidden = !off.length; $("#sfOffN").textContent = off.length || ""; $("#sfOff").hidden = true; $("#sfOff").classList.remove("mini"); $("#sf").classList.remove("conoff"); $("#sfOffQ").value = ""; $("#sfOffQx").hidden = true;
   // su computer: copertina da sola, poi pagine a coppie come il volantino di carta
   SF.fogli = isDesk() ? [[0], ...Array.from({length:Math.ceil((v.pagine.length-1)/2)},(_,k)=>[1+2*k,2+2*k].filter(x=>x<v.pagine.length))]
@@ -700,7 +718,7 @@ function apriSfogliatore(id, k, riapri){
   $("#sf").style.setProperty("--c", NEG[id].colore);
   $("#sfTit").innerHTML = `${esc(NEG[id].nome)}${v.nome&&!/^offerte valide/i.test(v.nome)?" · "+esc(v.nome):""}<small>${v.dal&&v.al?`dal ${dataIt(v.dal)} al ${dataIt(v.al)}`:""}</small>`;
   // le prime pagine subito, le altre quando ci si avvicina
-  const im = (i, subito) => `<img ${subito?`src="${esc(v.pagine[i])}"`:`data-src="${esc(v.pagine[i])}"`} alt="Pagina ${i+1}">`;
+  const im = (i, subito) => `<img data-pg="${i}" ${subito?`src="${esc(v.pagine[i])}"`:`data-src="${esc(v.pagine[i])}"`} alt="Pagina ${i+1}">`;
   $("#sfPag").innerHTML = isDesk()
     ? SF.fogli.map((f,k)=>`<div class="sf-p" data-i="${k}"><div class="sp${f.length<2?" uno":""}">${f.map(i=>im(i,k<3)).join("")}</div></div>`).join("")
     : v.pagine.map((p,i)=>`<div class="sf-p" data-i="${i}">${im(i,i<5)}</div>`).join("");
@@ -709,7 +727,8 @@ function apriSfogliatore(id, k, riapri){
   $("#sfPag").scrollLeft = 0; // sempre dalla prima pagina (va fatto quando è già visibile)
   sfAggiorna(); precaricaPagine(v.pagine, true);
   const tocco = matchMedia("(pointer:coarse)").matches;
-  const h=$("#sfHint"); h.textContent = isDesk() && !tocco ? "Doppio clic per ingrandire · frecce ← → per sfogliare" : "Doppio tocco per ingrandire"; h.style.opacity=1; setTimeout(()=>h.style.opacity=0, 2200);
+  const h=$("#sfHint"); h.textContent = SF.tocco ? (isDesk() && !tocco ? "Clic su un prodotto per aggiungerlo · doppio clic per ingrandire" : "Tocca un prodotto per aggiungerlo · doppio tocco per ingrandire")
+    : isDesk() && !tocco ? "Doppio clic per ingrandire · frecce ← → per sfogliare" : "Doppio tocco per ingrandire"; h.style.opacity=1; setTimeout(()=>h.style.opacity=0, SF.tocco?3500:2200);
   if(!riapri) history.pushState({sf:1}, "");
 }
 function chiudiSfogliatore(daHistory){
@@ -719,7 +738,9 @@ function chiudiSfogliatore(daHistory){
 }
 const sfEtichetta = k => { const f=SF.fogli[k]||[k]; return `${f.map(x=>x+1).join("–")} / ${SF.pag.length}`; };
 function sfAggiorna(){
-  const el=$("#sfPag"), i=Math.round(el.scrollLeft/el.clientWidth); SF.i=i;
+  const el=$("#sfPag"), i=Math.round(el.scrollLeft/el.clientWidth);
+  if(i!==SF.i && SF.modo==="pag" && !$("#sfOff").hidden && !$("#sfOffQ").value){ SF.i=i; disegnaOffSf(); $("#sfOffL").scrollTop=0; }
+  SF.i=i;
   $("#sfNum").textContent = sfEtichetta(i);
   $("#sfPrev").disabled = i<=0; $("#sfNext").disabled = i>=SF.fogli.length-1;
   el.querySelectorAll(".sf-p").forEach(p=>{
@@ -748,15 +769,44 @@ document.addEventListener("keydown",e=>{
 });
 
 /* offerte del volantino aperto: si aggiungono alla lista senza chiudere il volantino */
+const qtaSf = id => SF.q?.[id] ?? qtaInLista(id);
+const bottoniSf = o => { const n=qtaSf(o.id);
+  return n ? `<div class="sfq"><button data-sfmeno="${esc(o.id)}" aria-label="Togli uno">−</button><b>${n}</b><button data-sfadd="${esc(o.id)}" aria-label="Aggiungi uno">+</button></div>`
+           : `<button class="sfadd" data-sfadd="${esc(o.id)}" aria-label="Aggiungi alla lista">+</button>`; };
+const pagineOra = () => SF.fogli[SF.i] || [SF.i];
 function disegnaOffSf(){
   const q = norm($("#sfOffQ").value).trim();
-  const l = (SF.off||[]).filter(o=>!q || q.split(" ").every(p=>(o._n+o._d).includes(p))).slice(0,1000);
-  $("#sfOffL").innerHTML = l.length ? l.map(o=>{ const n=qtaInLista(o.id);
-    return `<div class="sf-o">${o.immagine?`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(o.immagine)}" alt="">`:`<span class="em">${emojiPer(o.nome)}</span>`}
-      <div class="tx">${esc(o.nome)}<small>${esc([o.marca,o.sconto,o.dettaglio].filter(Boolean).join(" · "))}</small></div>
+  const pag = !q && SF.modo==="pag", pp = pagineOra();
+  let l = pag ? SF.inPag.filter(o=>pp.includes(o.pg)).sort((a,b)=>a.pg-b.pg || (a.box?.[1]??0)-(b.box?.[1]??0) || (a.box?.[0]??0)-(b.box?.[0]??0))
+              : (SF.off||[]).filter(o=>!q || q.split(" ").every(p=>(o._n+o._d).includes(p)));
+  l = l.slice(0,1000);
+  const modo = !q && SF.inPag?.length ? `<div class="sf-modo"><button data-sfmodo="pag" class="${pag?"on":""}">📄 ${pp.length>1?"Queste pagine":"Questa pagina"}</button><button data-sfmodo="tutto" class="${pag?"":"on"}">Tutto il volantino (${SF.off.length})</button></div>` : "";
+  $("#sfOffL").innerHTML = modo + (l.length ? l.map(o=>
+    `<div class="sf-o" data-sfo="${esc(o.id)}">${o.immagine?`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(o.immagine)}" alt="">`:`<span class="em">${emojiPer(o.nome)}</span>`}
+      <div class="tx"><span class="nm">${esc(o.nome)}</span><small>${esc([o.marca,o.sconto,o.dettaglio].filter(Boolean).join(" · "))}</small></div>
       <div class="pr">${euro(o.prezzo)}${o.prezzo_prima&&o.prezzo_prima>o.prezzo?`<s>${euro(o.prezzo_prima)}</s>`:""}</div>
-      <button class="sfadd ${n?"in":""}" data-sfadd="${esc(o.id)}" aria-label="Aggiungi alla lista">${n||"+"}</button></div>`; }).join("")
-    : `<p class="sub" style="text-align:center;padding:20px 0">Nessuna offerta trovata</p>`;
+      ${bottoniSf(o)}</div>`).join("")
+    : pag ? `<p class="sf-vuoto">Nessun prodotto riconosciuto in ${pp.length>1?"queste pagine":"questa pagina"}.<br>Prova “Tutto il volantino” o la ricerca.</p>`
+          : `<p class="sub" style="text-align:center;padding:20px 0">Nessuna offerta trovata</p>`);
+}
+// aggiorna solo i pulsanti delle quantità, senza ridisegnare (così l'elenco non salta)
+function aggiornaQtaSf(){
+  if(!$("#sf").classList.contains("on")) return;
+  SF.q = {}; if($("#sfOff").hidden) return;
+  $("#sfOffL").querySelectorAll("[data-sfo]").forEach(r=>{ const o=SF.off.find(x=>x.id===r.dataset.sfo); if(!o) return;
+    const b=r.lastElementChild, h=bottoniSf(o); if(b.outerHTML!==h) b.outerHTML=h; });
+}
+function togliOfferta(o){
+  const ex = LISTA.find(v=>v.offertaId===o.id && !v.fatto); if(!ex) return;
+  if((ex.qta||1)>1) store.upd(ex.id,{qta:(ex.qta||1)-1}); else store.del([ex.id]);
+  if(navigator.vibrate) navigator.vibrate(10);
+}
+// prodotto toccato sul volantino: apre l'elenco su questa pagina e lo evidenzia
+function scegliSf(o){
+  SF.modo="pag"; $("#sfOffQ").value=""; $("#sfOffQx").hidden=true;
+  if($("#sfOff").hidden) mostraOffSf(true); else { if($("#sfOff").classList.contains("mini")) riduciOffSf(false); disegnaOffSf(); }
+  requestAnimationFrame(()=>{ const r=$("#sfOffL").querySelector(`[data-sfo="${CSS.escape(o.id)}"]`); if(!r) return;
+    r.scrollIntoView({block:"center",behavior:"smooth"}); r.classList.remove("flash"); void r.offsetWidth; r.classList.add("flash"); });
 }
 function mostraOffSf(si){
   $("#sfOff").hidden = !si; $("#sf").classList.toggle("conoff", si); if(si) disegnaOffSf();
@@ -772,9 +822,34 @@ $("#sfOff").addEventListener("touchend",e=>{ if(ySf==null) return; const d=e.cha
 $("#sfOffX").onclick = ()=>mostraOffSf(false);
 let tSfq; $("#sfOffQ").oninput = ()=>{ $("#sfOffQx").hidden = !$("#sfOffQ").value; clearTimeout(tSfq); tSfq=setTimeout(disegnaOffSf,150); };
 $("#sfOffQx").onclick = ()=>{ $("#sfOffQ").value=""; $("#sfOffQx").hidden=true; disegnaOffSf(); $("#sfOffQ").focus(); };
-$("#sfOffL").onclick = e=>{ const b=e.target.closest("[data-sfadd]"); if(!b) return;
-  const o = DATI.offerte.find(x=>x.id===b.dataset.sfadd); if(!o) return;
-  aggiungiOfferta(o); b.classList.add("in"); b.textContent = (parseInt(b.textContent)||0)+1; };
+$("#sfOffL").onclick = e=>{
+  const m=e.target.closest("[data-sfmodo]"); if(m){ SF.modo=m.dataset.sfmodo; disegnaOffSf(); $("#sfOffL").scrollTop=0; return; }
+  const b=e.target.closest("[data-sfadd],[data-sfmeno]"); if(!b) return;
+  const id=b.dataset.sfadd||b.dataset.sfmeno, o=DATI.offerte.find(x=>x.id===id); if(!o) return;
+  const n=qtaSf(id);
+  if(b.dataset.sfadd){ aggiungiOfferta(o); SF.q[id]=n+1; } else { togliOfferta(o); SF.q[id]=Math.max(0,n-1); }
+  const r=b.closest("[data-sfo]"); if(r){ const x=r.lastElementChild; x.outerHTML=bottoniSf(o); } };
+// tocco su un prodotto della pagina (aspetta un attimo per non confondersi col doppio tocco che ingrandisce)
+$("#sfPag").addEventListener("click", e=>{
+  const img=e.target.closest("img[data-pg]"); if(!img || !SF.inPag?.length) return;
+  clearTimeout(SF.tapT); const x=e.clientX, y=e.clientY;
+  SF.tapT=setTimeout(()=>{
+    const r=img.getBoundingClientRect(), pg=+img.dataset.pg, fx=(x-r.left)/r.width*100, fy=(y-r.top)/r.height*100;
+    const hit = SF.inPag.filter(o=>o.pg===pg && o.box && fx>=o.box[0] && fx<=o.box[0]+o.box[2] && fy>=o.box[1] && fy<=o.box[1]+o.box[3])
+                        .sort((a,b)=>a.box[2]*a.box[3]-b.box[2]*b.box[3])[0];
+    if(!hit){ if(!SF.tocco){ SF.modo="pag"; if($("#sfOff").hidden) mostraOffSf(true); else disegnaOffSf(); } return; }
+    const z=document.createElement("div"); z.className="sf-zona";
+    Object.assign(z.style,{left:r.left+hit.box[0]/100*r.width+"px", top:r.top+hit.box[1]/100*r.height+"px", width:hit.box[2]/100*r.width+"px", height:hit.box[3]/100*r.height+"px"});
+    document.body.appendChild(z); setTimeout(()=>z.remove(),1200);
+    scegliSf(hit);
+  }, 280);
+});
+// su computer la manina compare sopra i prodotti toccabili
+$("#sfPag").addEventListener("mousemove", e=>{
+  if(!SF.tocco) return; const img=e.target.closest("img[data-pg]"); if(!img) return;
+  const r=img.getBoundingClientRect(), pg=+img.dataset.pg, fx=(e.clientX-r.left)/r.width*100, fy=(e.clientY-r.top)/r.height*100;
+  img.style.cursor = SF.inPag.some(o=>o.pg===pg && o.box && fx>=o.box[0] && fx<=o.box[0]+o.box[2] && fy>=o.box[1] && fy<=o.box[1]+o.box[3]) ? "pointer" : "";
+});
 // doppio tocco: ingrandisce la pagina nel punto toccato (e la rimette intera)
 let sfTap=0;
 function sfZoom(e, x, y){
@@ -786,9 +861,9 @@ function sfZoom(e, x, y){
 }
 $("#sfPag").addEventListener("touchend",e=>{
   if(e.touches.length) return; const t=Date.now();
-  if(t-sfTap<300){ const c=e.changedTouches[0]; sfZoom(e,c.clientX,c.clientY); e.preventDefault(); sfTap=0; } else sfTap=t;
+  if(t-sfTap<300){ clearTimeout(SF.tapT); const c=e.changedTouches[0]; sfZoom(e,c.clientX,c.clientY); e.preventDefault(); sfTap=0; } else sfTap=t;
 });
-$("#sfPag").addEventListener("dblclick",e=>sfZoom(e,e.clientX,e.clientY));
+$("#sfPag").addEventListener("dblclick",e=>{ clearTimeout(SF.tapT); sfZoom(e,e.clientX,e.clientY); });
 
 // scarica in anticipo le pagine nella cache del telefono, una alla volta senza rallentare l'app
 const giaPrecaricate = new Set(); let codaPre = [], preAttivo = false;
@@ -907,7 +982,7 @@ function disegnaLista(){
   }).join("");
 }
 
-function aggiornaTutto(){ disegnaLista(); if($("#v-off").classList.contains("on")) disegnaOfferte(); }
+function aggiornaTutto(){ disegnaLista(); if($("#v-off").classList.contains("on")) disegnaOfferte(); aggiornaQtaSf(); }
 
 /* ---------- reparti e scadenze ---------- */
 // macro-reparti, nell'ordine in cui si incontrano di solito nel supermercato

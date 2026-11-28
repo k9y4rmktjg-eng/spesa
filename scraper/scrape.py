@@ -263,7 +263,11 @@ def coop(ctx, n):
                     get(f"{base}/{lid}/{code}/categories").get("categories", [])}
         except Exception:
             cats = {}
-        promos = get(f"{base}/{lid}/{code}/promos?").get("promos", [])
+        try:   # un volantino senza elenco prodotti (es. cataloghi) non deve bloccare gli altri
+            promos = get(f"{base}/{lid}/{code}/promos?").get("promos", [])
+        except Exception as e:
+            log(f"   {titolo}: elenco prodotti non disponibile ({e}), salto questo volantino")
+            continue
         log(f"   {titolo}: {len(promos)} prodotti")
         for pr in promos:
             testi = []

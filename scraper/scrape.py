@@ -239,12 +239,25 @@ def lidl(ctx, n):
 
 # ---------------------------------------------------------------- COOP
 def coop(ctx, n):
-    code = n["codice_negozio"]
     base = "https://svdgt.coopalleanza3-0.it/apim"
     page = ctx.new_page()
+    # il codice del negozio per i servizi Coop: se non è in negozi.json lo ricavo dalle chiamate della pagina
+    chiamate = []
+    page.on("request", lambda r: chiamate.append(r.url) if "/apim/" in r.url else None)
     page.goto(n["pagina_negozio"], wait_until="domcontentloaded", timeout=60000)
     page.wait_for_timeout(2000)
     rifiuta_cookie(page)
+    if not n.get("codice_negozio"):
+        scorri(page, 4)
+        page.wait_for_timeout(3000)
+        trovati = [m.group(1) for u in chiamate for m in [re.search(r"/apim/(?:leaflets|[A-Za-z0-9]+)/(\d{3,5})(?:[/?]|$)", u)] if m]
+        if not trovati:
+            trovati = re.findall(r"/apim/leaflets/(\d{3,5})", page.content())
+        if not trovati:
+            raise RuntimeError("codice del negozio Coop non trovato nella pagina; chiamate viste: " + " ".join(chiamate[:8]))
+        n["codice_negozio"] = max(set(trovati), key=trovati.count)
+        log(f"  {n['nome']}: codice negozio ricavato dalla pagina = {n['codice_negozio']}")
+    code = n["codice_negozio"]
 
     def get(url):
         r = ctx.request.get(url, headers={"Referer": n["pagina_negozio"],
@@ -254,7 +267,7 @@ def coop(ctx, n):
         return r.json()
 
     leaflets = get(f"{base}/leaflets/{code}").get("leaflets", [])
-    log(f"  Coop: {len(leaflets)} volantini")
+    log(f"  {n['nome']}: {len(leaflets)} volantini")
     offerte, visti = [], set()
     for lf in leaflets:
         lid, titolo = lf["id"], lf.get("titolo") or ""
@@ -286,8 +299,8 @@ def coop(ctx, n):
                 continue
             visti.add(key)
             offerte.append({
-                "id": "coop-" + uid(pr.get("id"), lid),
-                "negozio": "coop",
+                "id": n["id"] + "-" + uid(pr.get("id"), lid),
+                "negozio": n["id"],
                 "nome": bel_nome(nome),
                 "marca": bel_nome(pr.get("brand") or ""),
                 "dettaglio": " · ".join(x for x in [pr.get("desc_promo2"), pr.get("desc_multi")] if x),
@@ -731,7 +744,7 @@ def coop_volantini(ctx, n):
                 s = ctx.request.get(f"{base}/{lf['id']}/{code}/sfogliabile", headers=hdr, timeout=60000).json()
                 urls = [p["path"] for p in sorted(s.get("pages", []), key=lambda p: p.get("number", 0)) if p.get("path")]
                 if urls:
-                    v["pagine"] = salva_pagine(ctx, "coop", lf["id"], urls, n["pagina_negozio"])
+                    v["pagine"] = salva_pagine(ctx, n["id"], lf["id"], urls, n["pagina_negozio"])
                     try:  # parole di ogni pagina, per sapere in che pagina sta ogni offerta
                         kw = _testo_pdf(ctx.request.get(s["pdf_path"], headers=hdr, timeout=120000).body())
                         if len(kw) == len(urls):
@@ -742,7 +755,7 @@ def coop_volantini(ctx, n):
             except Exception as e:
                 log(f"   pagine Coop non scaricate ({v['nome']}): {e}")
         volantini.append(v)
-    log(f"  Coop: {len(volantini)} volantini ({sum(1 for v in volantini if v.get('pagine'))} sfogliabili)")
+    log(f"  {n['nome']}: {len(volantini)} volantini ({sum(1 for v in volantini if v.get('pagine'))} sfogliabili)")
     return volantini
 
 

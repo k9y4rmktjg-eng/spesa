@@ -499,7 +499,7 @@ const MACRO = {"Salumi e formaggi":"Freschi","Latte, yogurt e uova":"Freschi","A
 const macro = c => MACRO[c] || c || "Altro";
 const NEG = {
   lidl:{nome:"Lidl",colore:"#0050AA",sigla:"L"}, conad:{nome:"Conad",colore:"#E30613",sigla:"C"},
-  coop:{nome:"Coop",colore:"#D3001C",sigla:"Co"}, carrefour:{nome:"Carrefour Casalecchio",breve:"Carrefour",colore:"#1A8BD6",sigla:"Cr"},
+  coop:{nome:"Coop",colore:"#D3001C",sigla:"Co"}, ipercoop:{nome:"Ipercoop I Portali",breve:"Ipercoop",colore:"#9B1C31",sigla:"Ip"}, carrefour:{nome:"Carrefour Casalecchio",breve:"Carrefour",colore:"#1A8BD6",sigla:"Cr"},
   altro:{nome:"Altro",colore:"#7A6A4F",sigla:"•"}
 };
 const euro = v => v==null||isNaN(v) ? "" : v.toLocaleString("it-IT",{style:"currency",currency:"EUR"});
@@ -544,7 +544,7 @@ async function caricaOfferte(){
   }
   segnaPreferiti(); disegnaChipNegozi(); disegnaOfferte(); disegnaVolantini(); precaricaVolantini(); disegnaAvvisi(); disegnaImpNegozi(); aggiornaPreferiti(); disegnaLista();
   const agg = DATI.aggiornato ? new Date(DATI.aggiornato) : null;
-  $("#sottotitolo").textContent = "Nonantola · Casalecchio" + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
+  $("#sottotitolo").textContent = "Nonantola · Modena · Casalecchio" + (agg ? " · aggiornate "+agg.toLocaleDateString("it-IT",{weekday:"short",day:"numeric",month:"short"}) : "");
 }
 
 function logo(id,size){ const n=NEG[id]||NEG.altro; return `<span class="logo" style="background:${n.colore}${size?`;width:${size}px;height:${size}px`:""}">${n.sigla}</span>`; }

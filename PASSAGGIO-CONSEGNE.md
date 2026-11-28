@@ -19,9 +19,9 @@ Aggiornato al 14/11/2026.
 | Lista condivisa e preferiti | Firebase Firestore, progetto `spesa-famiglia-8fcf6` (piano gratuito) |
 | Copia locale sul Mac | `Download/spesa-famiglia` |
 
-**Negozi:** Lidl (offerte nazionali), Conad Via Provinciale Est 10 Nonantola, Coop Piazza Ilaria Alpi 15 Nonantola, Carrefour Iper Casalecchio di Reno (Shopville Gran Reno).
+**Negozi:** Lidl (offerte nazionali), Conad Via Provinciale Est 10 Nonantola, Coop Piazza Ilaria Alpi 15 Nonantola, Ipercoop I Portali Viale dello Sport 50 Modena (codice Coop `9001`, stesso scraper `coop`), Carrefour Iper Casalecchio di Reno (Shopville Gran Reno).
 
-**Come si caricano le modifiche:** a mano dal sito GitHub → cartella giusta → *Add file → Upload files* → *Commit changes*. Dopo 1–2 minuti (pallino verde) l'app si aggiorna da sola.
+**Come si caricano le modifiche:** dal 28/11/2026 GitHub è collegato a Claude, che può caricare le modifiche direttamente. In alternativa, a mano dal sito GitHub → cartella giusta → *Add file → Upload files* → *Commit changes*. Dopo 1–2 minuti (pallino verde) l'app si aggiorna da sola.
 
 ---
 
